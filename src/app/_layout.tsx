@@ -15,6 +15,7 @@ import { FeedbackProvider } from '../components/Feedback';
 import { Loading } from '../components/ui';
 import { Offline } from '../components/Offline';
 import { AppIntro } from '../components/AppIntro';
+import { UpdateGate } from '../components/UpdateGate';
 
 // Keep the native splash until the in-app intro (same logo) is on screen.
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -62,7 +63,8 @@ function Intro({ fontsReady }: { fontsReady: boolean }) {
   const { ready } = useAuth();
   const [done, setDone] = useState(false);
   const finish = useCallback(() => setDone(true), []);
-  if (done) return null;
+  // After the intro, check Firebase for a newer APK.
+  if (done) return <UpdateGate />;
   return <AppIntro ready={fontsReady && ready} onDone={finish} />;
 }
 

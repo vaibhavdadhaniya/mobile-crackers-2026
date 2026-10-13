@@ -20,6 +20,7 @@ const f = loadTs('src/format.ts');
 const m = loadTs('src/money.ts');
 const sess = loadTs('src/session.ts');
 const nav = loadTs('src/notify.ts');
+const upd = loadTs('src/update.ts');
 
 const KISHAN = { id: 'r1', name: 'Kishan Desai', phone: '9800000001' };
 const KIRAN = { id: 'r2', name: 'Kiran Joshi', phone: '9800000002' };
@@ -177,5 +178,39 @@ describe('notification taps', () => {
     assert.equal(nav.notificationRoute('kit_received', false), '/user/activity');
     assert.equal(nav.notificationRoute('request_rejected', false), '/user/request');
     assert.equal(nav.notificationRoute('admin_granted', false), null);
+  });
+});
+
+describe('app update & maintenance (Firestore)', () => {
+  const doc = { fields: {
+    androidVersion: { stringValue: '1.0.2' }, androidBuildNumber: { integerValue: '3' },
+    androidDownloadUrl: { stringValue: 'https://x/app.apk' }, iosBuildNumber: { integerValue: '0' },
+    forceUpdate: { booleanValue: false }, UpdateLog: { stringValue: 'Fixes' },
+    is_maintenance: { booleanValue: false }, maintenance_message: { stringValue: '' },
+  } };
+
+  it('parses Firestore REST typed values', () => {
+    const v = upd.parseFirestoreDoc(doc);
+    assert.equal(v.androidBuildNumber, 3);
+    assert.equal(v.androidVersion, '1.0.2');
+    assert.equal(v.forceUpdate, false);
+    assert.deepEqual(upd.parseFirestoreDoc(null), {});
+  });
+
+  it('decides none / optional / force from the build number', () => {
+    const v = upd.parseFirestoreDoc(doc);
+    assert.equal(upd.decideUpdate(v, 'android', 3), 'none');
+    assert.equal(upd.decideUpdate(v, 'android', 2), 'optional');
+    assert.equal(upd.decideUpdate({ ...v, forceUpdate: true }, 'android', 2), 'force');
+    assert.equal(upd.decideUpdate({ ...v, androidDownloadUrl: '' }, 'android', 1), 'none');
+    assert.equal(upd.decideUpdate(v, 'android', 0), 'none'); // unknown own build (Expo Go)
+    assert.equal(upd.decideUpdate(v, 'ios', 1), 'none'); // iOS build 0 = not published
+  });
+
+  it('maintenance blocks members but not admins', () => {
+    const on = { is_maintenance: true };
+    assert.equal(upd.inMaintenance(on, false), true);
+    assert.equal(upd.inMaintenance(on, true), false);
+    assert.equal(upd.inMaintenance({ is_maintenance: false }, false), false);
   });
 });

@@ -74,8 +74,9 @@ export default function SellScreen() {
   const submit = async () => {
     const n = qty;
     const name = form.name.trim();
-    if (!/^\d{10}$/.test(form.phone)) return fb.error('Invalid mobile number', 'Enter a 10 digit customer number.');
     if (!name) return fb.error('Customer name required');
+    // Mobile is optional; a partly typed number is still an error.
+    if (form.phone && !/^\d{10}$/.test(form.phone)) return fb.error('Invalid mobile number', 'Enter a 10 digit number or leave it empty.');
     if (!n) return fb.error('Enter kit count');
     if (n > balance) return fb.error('Not enough kits', `You have ${num(balance)} kits available.`);
     const ok = await fb.confirm({
@@ -83,7 +84,7 @@ export default function SellScreen() {
       icon: 'cart-outline',
       details: [
         { label: 'Customer', value: name },
-        { label: 'Mobile', value: form.phone },
+        { label: 'Mobile', value: form.phone || 'Not given' },
         { label: 'Kits', value: num(n) },
         ...(price ? [{ label: 'Amount', value: money(n * price) }] : []),
       ],
@@ -95,7 +96,7 @@ export default function SellScreen() {
       const r = await api.post<{ message: string }>('/kits/sell', {
         quantity: String(qty),
         customerName: name,
-        customerPhone: form.phone,
+        customerPhone: form.phone || null,
         registrationId: form.regId,
       });
       fb.success('Sale recorded', r.message);
@@ -136,7 +137,7 @@ export default function SellScreen() {
       <Card>
         <View style={{ zIndex: 2 }}>
           <Field
-            label="Customer mobile"
+            label="Customer mobile (optional)"
             icon="call-outline"
             placeholder="10 digit number"
             keyboardType="number-pad"
@@ -173,7 +174,7 @@ export default function SellScreen() {
           </View>
         )}
 
-        <Button title="Save sale" onPress={submit} loading={busy} disabled={balance === 0 || !form.name.trim() || form.phone.length !== 10} />
+        <Button title="Save sale" onPress={submit} loading={busy} disabled={balance === 0 || !form.name.trim()} />
       </Card>
     </Screen>
   );

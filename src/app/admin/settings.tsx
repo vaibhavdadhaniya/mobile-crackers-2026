@@ -10,6 +10,7 @@ import { useFeedback } from '../../components/Feedback';
 import { DatePicker } from '../../components/DatePicker';
 import { ResetData } from '../../components/ResetData';
 import { AdminsManager } from '../../components/AdminsManager';
+import { AppUpdateForm } from '../../components/AppUpdateForm';
 import { colors, radius } from '../../theme';
 import { dateLabel, digitsOnly, money, num, rupees } from '../../format';
 
@@ -259,6 +260,10 @@ export default function AdminSettings() {
             disabled={!data?.msg91AuthKeySet || !data?.msg91WaNumber}
           />
         </View>
+      </Section>
+
+      <Section icon="cloud-download-outline" tone="info" title="App update & maintenance" sub="Version, force update and maintenance mode">
+        <AppUpdateForm />
       </Section>
 
       <Section icon="shield-checkmark-outline" tone="warning" title="Kit management access" sub="Give members full app access without changing their role">

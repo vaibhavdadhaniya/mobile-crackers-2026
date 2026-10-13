@@ -4,29 +4,27 @@ import * as SplashScreen from 'expo-splash-screen';
 import { colors } from '../theme';
 import { Text } from './Text';
 
-// Same logo + white background as the native splash, so the hand-off is seamless.
-const LOGO = require('../../assets/hp-logo.png');
-const LOGO_W = 190; // native splash: imageWidth 220 x 86% logo fill
-const LOGO_RATIO = 5627 / 7397;
-const MIN_SHOW_MS = 1500;
+// The native splash is plain white (assets/splash-blank.png), so this is the ONLY logo
+// animation: the logo fades/scales in on white, then the title and loading bar follow.
+const LOGO = require('../../assets/shc-badge.png'); // same badge as the login screen
+const LOGO_W = 150;
+const LOGO_RATIO = 1;
+const MIN_SHOW_MS = 1700;
 
 export function AppIntro({ ready, onDone }: { ready: boolean; onDone: () => void }) {
-  const logoScale = useRef(new Animated.Value(1)).current;
+  const logoIn = useRef(new Animated.Value(0)).current;
   const textIn = useRef(new Animated.Value(0)).current;
   const bar = useRef(new Animated.Value(0)).current;
   const fadeOut = useRef(new Animated.Value(1)).current;
   const [minDone, setMinDone] = useState(false);
   const started = useRef(Date.now());
 
-  // Native splash hides once this identical screen is on screen.
+  // White native splash -> white intro (no visible hand-off), then the single logo animation.
   const onLayout = () => {
     SplashScreen.hideAsync().catch(() => {});
     Animated.parallel([
-      Animated.sequence([
-        Animated.timing(logoScale, { toValue: 0.92, duration: 260, easing: Easing.out(Easing.quad), useNativeDriver: true }),
-        Animated.spring(logoScale, { toValue: 1, friction: 5, tension: 60, useNativeDriver: true }),
-      ]),
-      Animated.timing(textIn, { toValue: 1, duration: 520, delay: 280, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      Animated.timing(logoIn, { toValue: 1, duration: 650, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      Animated.timing(textIn, { toValue: 1, duration: 520, delay: 450, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
       Animated.timing(bar, { toValue: 0.85, duration: MIN_SHOW_MS, easing: Easing.out(Easing.quad), useNativeDriver: false }),
     ]).start();
     setTimeout(() => setMinDone(true), Math.max(0, MIN_SHOW_MS - (Date.now() - started.current)));
@@ -42,8 +40,13 @@ export function AppIntro({ ready, onDone }: { ready: boolean; onDone: () => void
 
   return (
     <Animated.View style={[StyleSheet.absoluteFill, s.wrap, { opacity: fadeOut }]} onLayout={onLayout} pointerEvents="none">
-      <Animated.View style={{ transform: [{ scale: logoScale }] }}>
-        <Image source={LOGO} style={{ width: LOGO_W, height: LOGO_W * LOGO_RATIO }} resizeMode="contain" />
+      <Animated.View
+        style={{
+          opacity: logoIn,
+          transform: [{ scale: logoIn.interpolate({ inputRange: [0, 1], outputRange: [0.82, 1] }) }],
+        }}
+      >
+        <Image source={LOGO} style={{ width: LOGO_W, height: LOGO_W * LOGO_RATIO, borderRadius: 30 }} resizeMode="contain" />
       </Animated.View>
       <Animated.View
         style={{ alignItems: 'center', marginTop: 26, opacity: textIn, transform: [{ translateY: textIn.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }] }}

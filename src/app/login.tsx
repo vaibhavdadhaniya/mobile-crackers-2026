@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Platform, Pressable, ScrollView, StyleSheet, TextInput as RNTextInput, useWindowDimensions, View } from 'react-native';
+import { Animated, Image, Platform, Pressable, ScrollView, StyleSheet, TextInput as RNTextInput, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,7 +8,7 @@ import { useAuth } from '../auth';
 import { Button, tap } from '../components/ui';
 import { Text, TextInput } from '../components/Text';
 import { LinearGradient } from 'expo-linear-gradient';
-import { FireworkLogo, FireworksBackdrop } from '../components/Fireworks';
+import { FireworksBackdrop } from '../components/Fireworks';
 import { useFeedback } from '../components/Feedback';
 import { useKeyboardHeight } from '../components/KeyboardAware';
 import { colors, radius, shadow } from '../theme';
@@ -102,9 +102,7 @@ export default function Login() {
       >
         <View style={[s.hero, { paddingTop: insets.top + 48, minHeight: Math.max(320, height * 0.46), paddingLeft: 24 + insets.left, paddingRight: 24 + insets.right }]}>
           <View style={s.logoRing}>
-            <View style={s.logo}>
-              <FireworkLogo size={66} />
-            </View>
+            <Image source={require('../../assets/shc-badge.png')} style={s.logo} />
           </View>
           <Text style={s.org}>Harimay Yuvak Mandal</Text>
           <View style={s.orgSubRow}>
@@ -237,8 +235,8 @@ function OtpBoxes({ value, onPress }: { value: string; onPress: () => void }) {
 
 const s = StyleSheet.create({
   hero: { alignItems: 'center', justifyContent: 'center', paddingBottom: 44 },
-  logoRing: { padding: 6, borderRadius: 34, backgroundColor: 'rgba(255,255,255,0.18)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.35)', marginBottom: 18 },
-  logo: { width: 84, height: 84, borderRadius: 28, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', ...shadow(3) },
+  logoRing: { padding: 6, borderRadius: 30, backgroundColor: 'rgba(255,255,255,0.18)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.35)', marginBottom: 18 },
+  logo: { width: 108, height: 108, borderRadius: 24 },
   org: { color: '#fff', fontSize: 25, fontWeight: '700', textAlign: 'center', letterSpacing: 0.2, textShadowColor: 'rgba(124,45,18,0.35)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 6 },
   orgSubRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 8 },
   rule: { width: 22, height: 1, backgroundColor: 'rgba(255,255,255,0.6)' },

@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "206987229730",
+    "firebase_url": "https://hpym2024-7cfda-default-rtdb.firebaseio.com",
+    "project_id": "hpym2024-7cfda",
+    "storage_bucket": "hpym2024-7cfda.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:206987229730:android:3fd138bde95216df56687b",
+        "android_client_info": {
+          "package_name": "com.app.hpym_2024"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCQwGATP8oxkZE4yPQHyJeQDEYMdQgffHs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

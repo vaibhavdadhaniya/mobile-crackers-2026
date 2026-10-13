@@ -19,12 +19,13 @@
       }
     },
     "android": {
-      "package": "com.fatakda.kit",
+      "package": "com.app.hpym_2024",
       "adaptiveIcon": {
         "backgroundColor": "#8B0005",
         "foregroundImage": "./assets/shc-adaptive-fg.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "versionCode": 1
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -45,8 +46,8 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/hp-splash.png",
-          "imageWidth": 220,
+          "image": "./assets/splash-blank.png",
+          "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#FFFFFF"
         }
@@ -67,7 +68,12 @@
       "typedRoutes": true
     },
     "extra": {
-      "apiUrl": "https://64.227.168.97"
+      "apiUrl": "https://64.227.168.97",
+      "firebase": {
+        "projectId": "hpym2024-7cfda",
+        "firestoreDb": "harimaypradesh",
+        "apiKey": "AIzaSyCQwGATP8oxkZE4yPQHyJeQDEYMdQgffHs"
+      }
     },
     "backgroundColor": "#FFF9F5"
   }

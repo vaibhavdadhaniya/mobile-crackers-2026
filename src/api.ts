@@ -302,3 +302,19 @@ export type MoneyTransfer = {
 };
 
 export type WalletEntry = { id: string; type: 'sale' | 'transfer_in' | 'transfer_out'; amount: number; note: string | null; created_at: string };
+
+export type AppConfigSettings = {
+  androidVersion?: string;
+  androidBuildNumber?: number;
+  androidDownloadUrl?: string;
+  iosVersion?: string;
+  iosBuildNumber?: number;
+  forceUpdate?: boolean;
+  UpdateLog?: string;
+  is_maintenance?: boolean;
+  maintenance_title?: string;
+  maintenance_message?: string;
+  updatedAt?: string;
+  updatedBy?: string;
+};
+export type AppConfigResponse = { configured: boolean; settings: AppConfigSettings | null };
