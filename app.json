@@ -9,6 +9,7 @@
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": false,
+      "deploymentTarget": "16.4",
       "bundleIdentifier": "com.fatakda.kit",
       "infoPlist": {
         "NSAppTransportSecurity": {
@@ -40,6 +41,7 @@
         }
       ],
       "expo-font",
+      "./plugins/with-scene-lifecycle",
       [
         "expo-splash-screen",
         {
