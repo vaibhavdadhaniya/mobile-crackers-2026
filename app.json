@@ -2,7 +2,7 @@
   "expo": {
     "name": "Shree Hari Crackers",
     "slug": "fatakda-kit",
-    "version": "1.0",
+    "version": "1.0.0",
     "scheme": "fatakdakit",
     "orientation": "portrait",
     "icon": "./assets/shc-icon.png",
@@ -10,13 +10,14 @@
     "ios": {
       "supportsTablet": false,
       "deploymentTarget": "16.4",
+      "buildNumber": "1",
       "bundleIdentifier": "com.app.hpym2024",
       "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
-        "NSLocalNetworkUsageDescription": "Shree Hari Crackers uses the local network to connect to the development server.",
+        "CFBundleDisplayName": "Crackers Stock",
+        "NSLocalNetworkUsageDescription": "Crackers Stock uses the local network to connect to the development server.",
         "NSAppTransportSecurity": {
-          "NSAllowsArbitraryLoads": true,
-          "NSAllowsLocalNetworking": true
+          "NSAllowsArbitraryLoads": true
         }
       }
     },
