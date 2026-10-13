@@ -2,7 +2,7 @@ import { ReactNode, useEffect, useState } from 'react';
 import { LayoutAnimation, Pressable, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { api, getBaseUrl, Settings } from '../../api';
+import { api, Settings } from '../../api';
 import { useAuth } from '../../auth';
 import { useApi } from '../../hooks';
 import { Avatar, Banner, Button, Card, Field, IconName, IconTile, Screen, Segmented, tap, Text, tones } from '../../components/ui';
@@ -275,10 +275,6 @@ export default function AdminSettings() {
 
       <ResetData />
 
-      <View style={s.server}>
-        <Ionicons name="server-outline" size={13} color={colors.faint} />
-        <Text style={s.serverText}>{getBaseUrl()}</Text>
-      </View>
       <Button
         title="Sign out"
         variant="danger"
@@ -372,6 +368,4 @@ const s = StyleSheet.create({
   link: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
   linkBorder: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
   linkText: { fontWeight: '700', color: colors.text, fontSize: 15 },
-  server: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 12, marginTop: 4 },
-  serverText: { color: colors.faint, fontSize: 12 },
 });

@@ -4,12 +4,13 @@ import { needsRefresh, on401 } from './session';
 
 const TOKEN_KEY = 'fk_token';
 const REFRESH_KEY = 'fk_refresh';
-const URL_KEY = 'fk_api_url';
+const LEGACY_URL_KEY = 'fk_api_url'; // old saved server address, no longer used
 
 const DEFAULT_URL: string =
   (Constants.expoConfig?.extra as { apiUrl?: string } | undefined)?.apiUrl ?? 'http://192.168.1.10:4000';
 
-let baseUrl = DEFAULT_URL;
+// The API address is fixed at build time (app.json extra.apiUrl).
+const baseUrl = DEFAULT_URL;
 let token: string | null = null;
 let refreshToken: string | null = null;
 let onSessionEnded: (() => void) | null = null;
@@ -19,22 +20,16 @@ const write = (k: string, v: string | null) =>
   (v ? SecureStore.setItemAsync(k, v) : SecureStore.deleteItemAsync(k)).catch(() => {});
 
 export async function loadStored() {
-  const [t, r, u] = await Promise.all([read(TOKEN_KEY), read(REFRESH_KEY), read(URL_KEY)]);
+  const [t, r] = await Promise.all([read(TOKEN_KEY), read(REFRESH_KEY)]);
   token = t;
   refreshToken = r;
-  if (u) baseUrl = u;
+  void write(LEGACY_URL_KEY, null); // forget any address saved by older versions
   return { token: t, refreshToken: r, baseUrl };
 }
 
 export const getBaseUrl = () => baseUrl;
 export const getToken = () => token;
 
-export async function setBaseUrl(url: string) {
-  let u = url.trim().replace(/\/+$/, '');
-  if (u && !/^https?:\/\//i.test(u)) u = `http://${u}`;
-  baseUrl = u;
-  await write(URL_KEY, baseUrl);
-}
 
 export type SessionTokens = { token: string; refreshToken?: string | null };
 
@@ -76,7 +71,7 @@ async function send(method: string, path: string, body: unknown, timeoutMs: numb
     const data = await res.json().catch(() => ({}));
     return { ok: res.ok, status: res.status, data };
   } catch {
-    throw new ApiError(0, `Cannot reach server at ${baseUrl}. Check Wi-Fi and server address.`);
+    throw new ApiError(0, 'Cannot connect right now. Check your internet connection and try again.');
   } finally {
     clearTimeout(timer);
   }
@@ -137,7 +132,7 @@ async function request<T>(method: string, path: string, body?: unknown, timeoutM
       const res = await refreshSession();
       if (res === 'ok') r = await send(method, path, body, timeoutMs, token);
       else if (res === 'ended') onSessionEnded?.();
-      else throw new ApiError(0, `Cannot reach server at ${baseUrl}. Check Wi-Fi and server address.`);
+      else throw new ApiError(0, 'Cannot connect right now. Check your internet connection and try again.');
     }
   }
   if (!r.ok) throw new ApiError(r.status, r.data.error || `Request failed (${r.status})`, r.data.code);

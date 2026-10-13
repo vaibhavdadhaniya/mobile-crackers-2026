@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Fatakda Kit",
+    "name": "Shree Hari Crackers",
     "slug": "fatakda-kit",
     "version": "1.0.0",
     "scheme": "fatakdakit",
     "orientation": "portrait",
-    "icon": "./assets/hp-icon.png",
+    "icon": "./assets/shc-icon.png",
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": false,
@@ -20,8 +20,8 @@
     "android": {
       "package": "com.fatakda.kit",
       "adaptiveIcon": {
-        "backgroundColor": "#FFFFFF",
-        "foregroundImage": "./assets/hp-adaptive-fg.png"
+        "backgroundColor": "#8B0005",
+        "foregroundImage": "./assets/shc-adaptive-fg.png"
       },
       "predictiveBackGestureEnabled": false
     },
@@ -48,13 +48,24 @@
           "resizeMode": "contain",
           "backgroundColor": "#FFFFFF"
         }
+      ],
+      [
+        "./plugins/withServerCert",
+        {
+          "certPaths": [
+            "certs/server_cert.pem"
+          ],
+          "hosts": [
+            "64.227.168.97"
+          ]
+        }
       ]
     ],
     "experiments": {
       "typedRoutes": true
     },
     "extra": {
-      "apiUrl": "https://64.227.168.97:7004"
+      "apiUrl": "https://64.227.168.97"
     },
     "backgroundColor": "#FFF9F5"
   }

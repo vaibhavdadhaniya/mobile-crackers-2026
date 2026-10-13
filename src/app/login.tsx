@@ -3,10 +3,9 @@ import { Animated, Platform, Pressable, ScrollView, StyleSheet, TextInput as RNT
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
-import { api, ApiError, getBaseUrl, setBaseUrl, User } from '../api';
+import { api, User } from '../api';
 import { useAuth } from '../auth';
-import { Button, Field, tap } from '../components/ui';
-import { Sheet } from '../components/Sheet';
+import { Button, tap } from '../components/ui';
 import { Text, TextInput } from '../components/Text';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FireworkLogo, FireworksBackdrop } from '../components/Fireworks';
@@ -29,9 +28,6 @@ export default function Login() {
   const [busy, setBusy] = useState(false);
   const [mode, setMode] = useState<'static' | 'msg91' | 'whatsapp'>('static');
   const [cooldown, setCooldown] = useState(0);
-  const [unreachable, setUnreachable] = useState(false);
-  const [serverOpen, setServerOpen] = useState(false);
-  const [server, setServer] = useState(getBaseUrl());
   const otpRef = useRef<RNTextInput>(null);
   const scrollRef = useRef<ScrollView>(null);
   const kbHeight = useKeyboardHeight();
@@ -64,7 +60,6 @@ export default function Login() {
     setBusy(true);
     try {
       const r = await api.post<{ mode: 'static' | 'msg91' | 'whatsapp' }>('/auth/send-otp', { phone });
-      setUnreachable(false);
       setMode(r.mode);
       setOtp('');
       setCooldown(30);
@@ -72,7 +67,6 @@ export default function Login() {
       fb.success('OTP sent', r.mode === 'whatsapp' ? `Check WhatsApp on +91 ${phone}` : `Code sent to +91 ${phone}`);
       setTimeout(() => otpRef.current?.focus(), 300);
     } catch (e) {
-      setUnreachable(e instanceof ApiError && e.status === 0);
       fb.error('Could not send OTP', (e as Error).message);
     } finally {
       setBusy(false);
@@ -127,18 +121,6 @@ export default function Login() {
               <Text style={s.p}>Use your registered mobile number. We'll send a one-time password.</Text>
               <PhoneInput value={phone} onChange={setPhone} onSubmit={sendOtp} onFocus={revealForm} />
               <Button title="Continue" onPress={sendOtp} loading={busy} disabled={phone.length !== 10} style={{ marginTop: 18 }} />
-              {unreachable && (
-                <Pressable
-                  style={s.serverLink}
-                  onPress={() => {
-                    tap();
-                    setServer(getBaseUrl());
-                    setServerOpen(true);
-                  }}
-                >
-                  <Text style={s.serverLinkText}>Server not reachable? Change server address</Text>
-                </Pressable>
-              )}
               <View style={s.secure}>
                 <Ionicons name="lock-closed-outline" size={13} color={colors.faint} />
                 <Text style={s.secureText}>Only registered members can sign in</Text>
@@ -201,19 +183,6 @@ export default function Login() {
         </View>
         <View style={{ height: kbSpace, backgroundColor: '#fff' }} />
       </ScrollView>
-
-      <Sheet visible={serverOpen} onClose={() => setServerOpen(false)} title="Server address" subtitle="Backend URL on your network, e.g. http://192.168.1.10:4000">
-        <Field icon="link-outline" value={server} onChangeText={setServer} autoCapitalize="none" autoCorrect={false} keyboardType="url" />
-        <Button
-          title="Save"
-          onPress={async () => {
-            await setBaseUrl(server);
-            setServerOpen(false);
-            setUnreachable(false);
-            fb.success('Server address saved', getBaseUrl());
-          }}
-        />
-      </Sheet>
     </LinearGradient>
   );
 }
@@ -282,8 +251,6 @@ const s = StyleSheet.create({
   cc: { fontWeight: '600', fontSize: 15 },
   ccDivider: { width: 1, height: 22, backgroundColor: colors.border },
   phoneInput: { flex: 1, fontSize: 16, color: colors.text, letterSpacing: 0.5 },
-  serverLink: { alignItems: 'center', marginTop: 14 },
-  serverLinkText: { color: colors.primary, fontWeight: '600', fontSize: 13 },
   secure: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 16 },
   secureText: { color: colors.faint, fontSize: 12 },
   back: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', marginBottom: 14 },
