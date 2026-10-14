@@ -13,6 +13,7 @@ import {
   setSessionEndedHandler,
   User,
 } from './api';
+import { registerForPush, unregisterForPush } from './push';
 
 type AuthState = {
   ready: boolean;
@@ -47,8 +48,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setMe(null);
   }, []);
 
-  // User tapped "Sign out": also revoke the refresh token on the server.
+  // User tapped "Sign out": forget this device's push token, then revoke the refresh token.
   const logout = useCallback(async () => {
+    await unregisterForPush();
     await revokeSession();
     await clear();
   }, [clear]);
@@ -88,6 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           loggedIn.current = true;
           setTok(t);
           await retry();
+          void registerForPush();
         }
       } catch {
         // Storage unavailable: start logged out.
@@ -119,6 +122,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setMe({ user, ...EMPTY_ME });
       setTok(session.token);
       await refreshMe();
+      void registerForPush();
     },
     [refreshMe]
   );

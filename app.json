@@ -29,7 +29,10 @@
         "foregroundImage": "./assets/shc-adaptive-fg.png"
       },
       "predictiveBackGestureEnabled": false,
-      "versionCode": 1
+      "versionCode": 1,
+      "permissions": [
+        "android.permission.POST_NOTIFICATIONS"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -65,6 +68,12 @@
           "hosts": [
             "64.227.168.97"
           ]
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#F97316"
         }
       ]
     ],
