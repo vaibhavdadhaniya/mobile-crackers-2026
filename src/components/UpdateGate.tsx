@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../auth';
 import { Button, Text } from './ui';
 import { colors, radius, shadow } from '../theme';
-import { AppSettings, decideUpdate, inMaintenance, parseFirestoreDoc } from '../update';
+import { AppSettings, decideUpdate, inMaintenance, parseFirestoreDoc, UPDATE_LINKS, updateUrl } from '../update';
 
 const FB = (Constants.expoConfig?.extra as { firebase?: { projectId: string; firestoreDb: string; apiKey: string } } | undefined)?.firebase;
 const DOC_URL = FB
@@ -26,6 +26,10 @@ export function UpdateGate() {
   const [adminBypass, setAdminBypass] = useState(false); // logged-out user tapped "Admin sign in"
   const platform = Platform.OS === 'ios' ? 'ios' : 'android';
   const current = Number(Application.nativeBuildVersion) || 0;
+  const currentVersion = Application.nativeApplicationVersion ?? '';
+  // Identifies the published build, so "Later" snoozes until a newer one (version or build) is out.
+  const latestTag = (st: AppSettings) =>
+    platform === 'android' ? `${st.androidBuildNumber}` : `${st.iosVersion ?? ''}(${st.iosBuildNumber})`;
 
   const load = useCallback(async () => {
     if (!DOC_URL) return;
@@ -33,9 +37,8 @@ export function UpdateGate() {
       const res = await fetch(DOC_URL);
       if (!res.ok) return;
       const s = parseFirestoreDoc(await res.json());
-      const latest = platform === 'android' ? s.androidBuildNumber : s.iosBuildNumber;
       const snooze = await SecureStore.getItemAsync(SNOOZE_KEY).catch(() => null);
-      setSnoozed(snooze === `${latest}:${today()}`);
+      setSnoozed(snooze === `${latestTag(s)}:${today()}`);
       setSettings(s);
     } catch {
       // Offline or Firebase unreachable: never block the app because of this check.
@@ -71,14 +74,15 @@ export function UpdateGate() {
     );
   }
 
-  const mode = decideUpdate(settings, platform, current);
+  const mode = decideUpdate(settings, platform, current, UPDATE_LINKS, currentVersion);
   if (mode === 'none' || (mode === 'optional' && snoozed)) return null;
   const force = mode === 'force';
+  const url = updateUrl(settings, platform, UPDATE_LINKS);
   const version = platform === 'android' ? settings.androidVersion : settings.iosVersion;
+  const latestBuild = platform === 'android' ? settings.androidBuildNumber : settings.iosBuildNumber;
 
   const later = async () => {
-    const latest = platform === 'android' ? settings.androidBuildNumber : settings.iosBuildNumber;
-    await SecureStore.setItemAsync(SNOOZE_KEY, `${latest}:${today()}`).catch(() => {});
+    await SecureStore.setItemAsync(SNOOZE_KEY, `${latestTag(settings)}:${today()}`).catch(() => {});
     setSnoozed(true);
   };
 
@@ -91,14 +95,13 @@ export function UpdateGate() {
           </View>
           <Text style={s.title}>{force ? 'Update required' : 'Update available'}</Text>
           <Text style={s.version}>
-            Version {version || 'new'} is available (you have {Application.nativeApplicationVersion}).
+            Version {version || 'new'} ({latestBuild}) is available. You have {currentVersion} ({current}).
           </Text>
           {settings.UpdateLog ? <Text style={s.message}>{settings.UpdateLog}</Text> : null}
-          {force ? <Text style={s.forceNote}>Please update to continue using the app.</Text> : null}
           <Button
             title="Update now"
             icon="download-outline"
-            onPress={() => settings.androidDownloadUrl && Linking.openURL(settings.androidDownloadUrl)}
+            onPress={() => url && Linking.openURL(url).catch(() => {})}
             style={{ marginTop: 18 }}
           />
           {!force ? <Button title="Later" variant="outline" onPress={later} style={{ marginTop: 10 }} /> : null}
@@ -117,5 +120,4 @@ const s = StyleSheet.create({
   title: { fontSize: 19, fontWeight: '700', textAlign: 'center' },
   version: { color: colors.muted, marginTop: 6, fontSize: 14 },
   message: { marginTop: 10, fontSize: 14, lineHeight: 20, color: colors.text, textAlign: 'center' },
-  forceNote: { marginTop: 12, color: colors.danger, fontSize: 13, fontWeight: '500' },
 });

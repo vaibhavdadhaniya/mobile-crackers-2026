@@ -207,6 +207,38 @@ describe('app update & maintenance (Firestore)', () => {
     assert.equal(upd.decideUpdate(v, 'ios', 1), 'none'); // iOS build 0 = not published
   });
 
+  it('compares dotted versions numerically', () => {
+    assert.equal(upd.compareVersions('1.0', '1.0.0'), 0);
+    assert.ok(upd.compareVersions('1.0.1', '1.0') > 0);
+    assert.ok(upd.compareVersions('1.10', '1.9') > 0);
+    assert.ok(upd.compareVersions('1.0', '1.1') < 0);
+  });
+
+  it('iOS: version decides first, then build number within the same version', () => {
+    const links = { ios: 'https://testflight.apple.com/join/x' };
+    const ios = (iosVersion, iosBuildNumber) => ({ iosVersion, iosBuildNumber });
+    assert.equal(upd.decideUpdate(ios('1.0', 30), 'ios', 29, links, '1.0'), 'optional'); // build bump
+    assert.equal(upd.decideUpdate(ios('1.0', 29), 'ios', 29, links, '1.0'), 'none');
+    assert.equal(upd.decideUpdate(ios('1.0.0', 30), 'ios', 29, links, '1.0'), 'optional'); // 1.0 == 1.0.0
+    assert.equal(upd.decideUpdate(ios('1.1', 1), 'ios', 29, links, '1.0'), 'optional'); // new version restarts builds
+    assert.equal(upd.decideUpdate(ios('1.0', 30), 'ios', 2, links, '1.1'), 'none'); // installed is newer
+    assert.equal(upd.decideUpdate(ios('', 30), 'ios', 29, links, '1.0'), 'optional'); // no version: build only
+    assert.equal(upd.decideUpdate(ios('2.0', 0), 'ios', 29, links, '1.0'), 'none'); // build 0 = not published
+  });
+
+  it('sends iOS to TestFlight and Android to the admin link or the default folder', () => {
+    const links = { ios: 'https://testflight.apple.com/join/x', android: 'https://drive.google.com/x' };
+    const v = upd.parseFirestoreDoc(doc);
+    assert.equal(upd.updateUrl(v, 'android', links), 'https://x/app.apk');
+    assert.equal(upd.updateUrl({ ...v, androidDownloadUrl: ' ' }, 'android', links), links.android);
+    assert.equal(upd.updateUrl(v, 'ios', links), links.ios);
+    assert.equal(upd.updateUrl(v, 'ios', {}), null);
+    // A default link is enough to offer the update.
+    assert.equal(upd.decideUpdate({ ...v, androidDownloadUrl: '' }, 'android', 1, links), 'optional');
+    assert.equal(upd.decideUpdate({ ...v, iosBuildNumber: 2 }, 'ios', 1, links), 'optional');
+    assert.equal(upd.decideUpdate({ ...v, iosBuildNumber: 2 }, 'ios', 1), 'none');
+  });
+
   it('maintenance blocks members but not admins', () => {
     const on = { is_maintenance: true };
     assert.equal(upd.inMaintenance(on, false), true);

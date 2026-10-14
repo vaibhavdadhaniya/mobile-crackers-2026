@@ -118,7 +118,17 @@ export function AppUpdateForm() {
         onChangeText={(v) => setAndroidBuild(digitsOnly(v))}
         hint="versionCode of the new APK; phones with a lower build see the update"
       />
-      <Field label="APK download link" icon="link-outline" placeholder="https://..." value={androidUrl} onChangeText={setAndroidUrl} autoCapitalize="none" autoCorrect={false} keyboardType="url" />
+      <Field
+        label="APK download link"
+        icon="link-outline"
+        placeholder="https://..."
+        value={androidUrl}
+        onChangeText={setAndroidUrl}
+        autoCapitalize="none"
+        autoCorrect={false}
+        keyboardType="url"
+        hint="Leave empty to use the default Google Drive folder"
+      />
 
       <Text style={s.subhead}>iOS</Text>
       <Field label="iOS version" icon="pricetag-outline" placeholder="e.g. 1.0.1" value={iosVersion} onChangeText={setIosVersion} autoCapitalize="none" />
