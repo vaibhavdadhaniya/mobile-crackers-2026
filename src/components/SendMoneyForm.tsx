@@ -67,7 +67,12 @@ export function SendMoneyForm({ wallet, onSent }: { wallet: Wallet | null; onSen
       </View>
       <SearchPicker<UserHit>
         endpoint="/wallet/recipients"
-        label={wallet?.scope === 'all' ? 'Receiver' : 'Receiver (your zone or kit management)'}
+        label="Receiver"
+        info={
+          wallet?.scope === 'all'
+            ? 'You can send money to anyone.'
+            : 'You can send money to people in your zone and to anyone with kit management access. Zone Admins and kit management can also send to Zone Admins of other zones.'
+        }
         placeholder="Search name or mobile number"
         selected={to}
         onSelect={setTo}

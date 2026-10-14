@@ -17,6 +17,8 @@ import { dateLabel, digitsOnly, money, num, rupees } from '../../format';
 export default function AdminSettings() {
   const { me, logout, refreshMe } = useAuth();
   const fb = useFeedback();
+  // OTP, app update, kit management access and data reset are main Super Admin only.
+  const primary = me?.user.isPrimary ?? me?.user.role === 'super_admin';
   const { data, error, refreshing, refresh, setData } = useApi<Settings>('/admin/settings');
 
   const [price, setPrice] = useState('');
@@ -127,148 +129,152 @@ export default function AdminSettings() {
         />
       </Section>
 
-      <Section
-        icon="key-outline"
-        tone="info"
-        title="OTP login"
-        sub={
-          data?.otpMode === 'whatsapp'
-            ? 'WhatsApp OTP is active'
-            : data?.otpMode === 'msg91'
-              ? 'SMS OTP is active'
-              : `Static OTP is active${data?.msg91AuthKeySet ? ' · MSG91 saved' : ''}`
-        }
-      >
-        <Segmented
-          options={[
-            { key: 'static', label: 'Static' },
-            { key: 'msg91', label: 'SMS' },
-            { key: 'whatsapp', label: 'WhatsApp' },
-          ]}
-          value={otpMode}
-          onChange={setOtpMode}
-        />
-        {otpMode === 'static' ? (
-          <Field
-            label="Static OTP"
-            icon="keypad-outline"
-            keyboardType="number-pad"
-            maxLength={8}
-            value={staticOtp}
-            onChangeText={(v) => setStaticOtp(digitsOnly(v))}
-          />
-        ) : (
-          <View style={s.warn}>
-            <Ionicons name="information-circle" size={16} color={colors.info} />
-            <Text style={s.warnText}>
-              Send a test OTP below before saving {otpMode === 'whatsapp' ? 'WhatsApp' : 'SMS'} mode, so nobody gets locked out.
-            </Text>
-          </View>
-        )}
+      {primary && (
+        <>
+          <Section
+            icon="key-outline"
+            tone="info"
+            title="OTP login"
+            sub={
+              data?.otpMode === 'whatsapp'
+                ? 'WhatsApp OTP is active'
+                : data?.otpMode === 'msg91'
+                  ? 'SMS OTP is active'
+                  : `Static OTP is active${data?.msg91AuthKeySet ? ' · MSG91 saved' : ''}`
+            }
+          >
+            <Segmented
+              options={[
+                { key: 'static', label: 'Static' },
+                { key: 'msg91', label: 'SMS' },
+                { key: 'whatsapp', label: 'WhatsApp' },
+              ]}
+              value={otpMode}
+              onChange={setOtpMode}
+            />
+            {otpMode === 'static' ? (
+              <Field
+                label="Static OTP"
+                icon="keypad-outline"
+                keyboardType="number-pad"
+                maxLength={8}
+                value={staticOtp}
+                onChangeText={(v) => setStaticOtp(digitsOnly(v))}
+              />
+            ) : (
+              <View style={s.warn}>
+                <Ionicons name="information-circle" size={16} color={colors.info} />
+                <Text style={s.warnText}>
+                  Send a test OTP below before saving {otpMode === 'whatsapp' ? 'WhatsApp' : 'SMS'} mode, so nobody gets locked out.
+                </Text>
+              </View>
+            )}
 
-        <Text style={s.subhead}>MSG91 credentials</Text>
-        <Field
-          label="Auth key"
-          icon="lock-closed-outline"
-          value={authKey}
-          onChangeText={setAuthKey}
-          autoCapitalize="none"
-          autoCorrect={false}
-          secureTextEntry
-          placeholder={data?.msg91AuthKeySet ? `Saved ${data.msg91AuthKeyMasked} · type to replace` : 'Paste MSG91 auth key'}
-        />
-        <Field label="Country code" icon="globe-outline" keyboardType="number-pad" maxLength={4} value={country} onChangeText={(v) => setCountry(digitsOnly(v))} />
+            <Text style={s.subhead}>MSG91 credentials</Text>
+            <Field
+              label="Auth key"
+              icon="lock-closed-outline"
+              value={authKey}
+              onChangeText={setAuthKey}
+              autoCapitalize="none"
+              autoCorrect={false}
+              secureTextEntry
+              placeholder={data?.msg91AuthKeySet ? `Saved ${data.msg91AuthKeyMasked} · type to replace` : 'Paste MSG91 auth key'}
+            />
+            <Field label="Country code" icon="globe-outline" keyboardType="number-pad" maxLength={4} value={country} onChangeText={(v) => setCountry(digitsOnly(v))} />
 
-        <Text style={s.subhead}>SMS OTP</Text>
-        <Field
-          label="SMS OTP template ID"
-          icon="chatbox-outline"
-          value={templateId}
-          onChangeText={setTemplateId}
-          autoCapitalize="none"
-          autoCorrect={false}
-          placeholder="MSG91 SMS OTP template id"
-        />
+            <Text style={s.subhead}>SMS OTP</Text>
+            <Field
+              label="SMS OTP template ID"
+              icon="chatbox-outline"
+              value={templateId}
+              onChangeText={setTemplateId}
+              autoCapitalize="none"
+              autoCorrect={false}
+              placeholder="MSG91 SMS OTP template id"
+            />
 
-        <Text style={s.subhead}>WhatsApp OTP</Text>
-        <Field
-          label="WhatsApp number (integrated in MSG91)"
-          icon="logo-whatsapp"
-          keyboardType="number-pad"
-          value={waNumber}
-          onChangeText={(v) => setWaNumber(digitsOnly(v))}
-          placeholder="With country code, e.g. 919876543210"
-        />
-        <Field label="Template name" icon="document-text-outline" value={waTemplate} onChangeText={setWaTemplate} autoCapitalize="none" autoCorrect={false} placeholder="login_otp" />
-        <Field label="Template language" icon="language-outline" value={waLanguage} onChangeText={setWaLanguage} autoCapitalize="none" autoCorrect={false} placeholder="en" />
-        <Field
-          label="Template namespace (optional)"
-          icon="code-outline"
-          value={waNamespace}
-          onChangeText={setWaNamespace}
-          autoCapitalize="none"
-          autoCorrect={false}
-          placeholder="Leave blank if not shown in MSG91"
-        />
+            <Text style={s.subhead}>WhatsApp OTP</Text>
+            <Field
+              label="WhatsApp number (integrated in MSG91)"
+              icon="logo-whatsapp"
+              keyboardType="number-pad"
+              value={waNumber}
+              onChangeText={(v) => setWaNumber(digitsOnly(v))}
+              placeholder="With country code, e.g. 919876543210"
+            />
+            <Field label="Template name" icon="document-text-outline" value={waTemplate} onChangeText={setWaTemplate} autoCapitalize="none" autoCorrect={false} placeholder="login_otp" />
+            <Field label="Template language" icon="language-outline" value={waLanguage} onChangeText={setWaLanguage} autoCapitalize="none" autoCorrect={false} placeholder="en" />
+            <Field
+              label="Template namespace (optional)"
+              icon="code-outline"
+              value={waNamespace}
+              onChangeText={setWaNamespace}
+              autoCapitalize="none"
+              autoCorrect={false}
+              placeholder="Leave blank if not shown in MSG91"
+            />
 
-        <Button
-          title="Save OTP settings"
-          icon="save-outline"
-          loading={saving === 'otp'}
-          onPress={() =>
-            save('otp', {
-              otpMode,
-              staticOtp: staticOtp || '123456',
-              msg91AuthKey: authKey || undefined,
-              msg91TemplateId: templateId,
-              msg91CountryCode: country || '91',
-              msg91WaNumber: waNumber,
-              msg91WaTemplate: waTemplate.trim() || 'login_otp',
-              msg91WaLanguage: waLanguage.trim() || 'en',
-              msg91WaNamespace: waNamespace,
-            })
-          }
-        />
-        <View style={s.divider} />
-        <Field
-          label="Send a test OTP to"
-          icon="call-outline"
-          keyboardType="number-pad"
-          maxLength={10}
-          value={testPhone}
-          onChangeText={(v) => setTestPhone(digitsOnly(v))}
-          placeholder={me?.user.phone}
-          hint="Save the settings first. Tests work even while static mode is on."
-        />
-        <View style={{ flexDirection: 'row', gap: 10 }}>
-          <Button
-            title="Test SMS"
-            variant="outline"
-            icon="chatbox-outline"
-            style={{ flex: 1 }}
-            loading={saving === 'test-msg91'}
-            onPress={() => testOtp('msg91')}
-            disabled={!data?.msg91AuthKeySet || !data?.msg91TemplateId}
-          />
-          <Button
-            title="Test WhatsApp"
-            variant="outline"
-            icon="logo-whatsapp"
-            style={{ flex: 1 }}
-            loading={saving === 'test-whatsapp'}
-            onPress={() => testOtp('whatsapp')}
-            disabled={!data?.msg91AuthKeySet || !data?.msg91WaNumber}
-          />
-        </View>
-      </Section>
+            <Button
+              title="Save OTP settings"
+              icon="save-outline"
+              loading={saving === 'otp'}
+              onPress={() =>
+                save('otp', {
+                  otpMode,
+                  staticOtp: staticOtp || '123456',
+                  msg91AuthKey: authKey || undefined,
+                  msg91TemplateId: templateId,
+                  msg91CountryCode: country || '91',
+                  msg91WaNumber: waNumber,
+                  msg91WaTemplate: waTemplate.trim() || 'login_otp',
+                  msg91WaLanguage: waLanguage.trim() || 'en',
+                  msg91WaNamespace: waNamespace,
+                })
+              }
+            />
+            <View style={s.divider} />
+            <Field
+              label="Send a test OTP to"
+              icon="call-outline"
+              keyboardType="number-pad"
+              maxLength={10}
+              value={testPhone}
+              onChangeText={(v) => setTestPhone(digitsOnly(v))}
+              placeholder={me?.user.phone}
+              hint="Save the settings first. Tests work even while static mode is on."
+            />
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <Button
+                title="Test SMS"
+                variant="outline"
+                icon="chatbox-outline"
+                style={{ flex: 1 }}
+                loading={saving === 'test-msg91'}
+                onPress={() => testOtp('msg91')}
+                disabled={!data?.msg91AuthKeySet || !data?.msg91TemplateId}
+              />
+              <Button
+                title="Test WhatsApp"
+                variant="outline"
+                icon="logo-whatsapp"
+                style={{ flex: 1 }}
+                loading={saving === 'test-whatsapp'}
+                onPress={() => testOtp('whatsapp')}
+                disabled={!data?.msg91AuthKeySet || !data?.msg91WaNumber}
+              />
+            </View>
+          </Section>
 
-      <Section icon="cloud-download-outline" tone="info" title="App update & maintenance" sub="Version, force update and maintenance mode">
-        <AppUpdateForm />
-      </Section>
+          <Section icon="cloud-download-outline" tone="info" title="App update & maintenance" sub="Version, force update and maintenance mode">
+            <AppUpdateForm />
+          </Section>
 
-      <Section icon="shield-checkmark-outline" tone="warning" title="Kit management access" sub="Give members full app access without changing their role">
-        <AdminsManager />
-      </Section>
+          <Section icon="shield-checkmark-outline" tone="warning" title="Kit management access" sub="Give members full app access without changing their role">
+            <AdminsManager />
+          </Section>
+        </>
+      )}
 
       <Card style={{ paddingVertical: 6 }}>
         <LinkRow icon="archive" tone="primary" label="Manage stock" sub={`Central stock: ${num(me?.balance)}`} onPress={() => router.push('/stock')} />
@@ -278,7 +284,7 @@ export default function AdminSettings() {
         <LinkRow icon="notifications" tone="info" label="Notifications" onPress={() => router.push('/notifications')} last />
       </Card>
 
-      <ResetData />
+      {primary && <ResetData />}
 
       <Button
         title="Sign out"

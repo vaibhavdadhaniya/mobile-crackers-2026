@@ -6,11 +6,16 @@ const TOKEN_KEY = 'fk_token';
 const REFRESH_KEY = 'fk_refresh';
 const LEGACY_URL_KEY = 'fk_api_url'; // old saved server address, no longer used
 
-const DEFAULT_URL: string =
-  (Constants.expoConfig?.extra as { apiUrl?: string } | undefined)?.apiUrl ?? 'http://192.168.1.10:4000';
+const extra = Constants.expoConfig?.extra as { apiUrl?: string; devApiPort?: number } | undefined;
 
-// The API address is fixed at build time (app.json extra.apiUrl).
-const baseUrl = DEFAULT_URL;
+// Development (Expo): talk to the backend on the same computer that runs the Expo dev server,
+// e.g. hostUri "192.168.1.5:8081" -> http://192.168.1.5:4000. Release builds use extra.apiUrl.
+function devApiUrl(): string | null {
+  const host = Constants.expoConfig?.hostUri?.split(':')[0];
+  return host ? `http://${host}:${extra?.devApiPort ?? 4000}` : null;
+}
+
+const baseUrl: string = (__DEV__ && devApiUrl()) || extra?.apiUrl || 'http://localhost:4000';
 let token: string | null = null;
 let refreshToken: string | null = null;
 let onSessionEnded: (() => void) | null = null;
@@ -153,7 +158,7 @@ export const api = {
 };
 
 // ---- Types ----
-export type User = { id: string; name: string; phone: string; role: string; isAdmin: boolean };
+export type User = { id: string; name: string; phone: string; role: string; isAdmin: boolean; isPrimary?: boolean };
 
 export type Me = {
   user: User;

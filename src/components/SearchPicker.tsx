@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { api } from '../api';
 import { colors, radius, shadow } from '../theme';
 import { Avatar, Field, tap } from './ui';
+import { useFeedback } from './Feedback';
 
 type Item = { id: string; name: string; phone: string };
 
@@ -18,6 +19,7 @@ export function SearchPicker<T extends Item>({
   onSelect,
   renderMeta,
   onQueryChange,
+  info,
 }: {
   endpoint: '/users/search' | '/registrations/search' | '/wallet/recipients';
   label?: string;
@@ -26,7 +28,9 @@ export function SearchPicker<T extends Item>({
   onSelect: (item: T | null) => void;
   renderMeta?: (item: T) => string;
   onQueryChange?: (q: string) => void;
+  info?: string; // shown from an (i) button next to the label
 }) {
+  const fb = useFeedback();
   const [q, setQ] = useState('');
   const [results, setResults] = useState<T[]>([]);
   const [loading, setLoading] = useState(false);
@@ -62,7 +66,7 @@ export function SearchPicker<T extends Item>({
   if (selected) {
     return (
       <View style={{ marginBottom: 16 }}>
-        {label && <Text style={s.label}>{label}</Text>}
+        {label && <LabelRow text={label} style={s.label} onInfo={info ? () => fb.info(label, info) : undefined} />}
         <View style={s.selected}>
           <Avatar name={selected.name} size={36} />
           <View style={{ flex: 1 }}>
@@ -86,8 +90,9 @@ export function SearchPicker<T extends Item>({
 
   return (
     <View>
+      {label && info ? <LabelRow text={label} style={s.fieldLabel} onInfo={() => fb.info(label, info)} /> : null}
       <Field
-        label={label}
+        label={info ? undefined : label}
         icon="search"
         placeholder={placeholder}
         value={q}
@@ -131,7 +136,22 @@ export function SearchPicker<T extends Item>({
   );
 }
 
+function LabelRow({ text, style, onInfo }: { text: string; style: object; onInfo?: () => void }) {
+  return (
+    <View style={s.labelRow}>
+      <Text style={[style, { marginBottom: 0 }]}>{text}</Text>
+      {onInfo ? (
+        <Pressable onPress={onInfo} hitSlop={10} accessibilityLabel={`About ${text}`}>
+          <Ionicons name="information-circle-outline" size={16} color={colors.muted} />
+        </Pressable>
+      ) : null}
+    </View>
+  );
+}
+
 const s = StyleSheet.create({
+  labelRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 6 },
+  fieldLabel: { fontSize: 12.5, fontWeight: '600', color: colors.muted },
   label: { fontSize: 13, fontWeight: '700', color: colors.text, marginBottom: 8 },
   list: {
     borderWidth: StyleSheet.hairlineWidth,

@@ -1,5 +1,5 @@
 import { createContext, ReactNode, useCallback, useContext, useEffect, useRef, useState } from 'react';
-import { Animated, Modal, Pressable, StyleSheet, View } from 'react-native';
+import { Animated, Easing, Modal, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -29,9 +29,9 @@ type FeedbackApi = {
 const FeedbackContext = createContext<FeedbackApi | null>(null);
 
 const KIND = {
-  success: { icon: 'checkmark-circle' as const, color: colors.success, bg: colors.successSoft },
-  error: { icon: 'alert-circle' as const, color: colors.danger, bg: colors.dangerSoft },
-  info: { icon: 'information-circle' as const, color: colors.info, bg: colors.infoSoft },
+  success: { icon: 'checkmark-circle' as const, dot: '#4ADE80' },
+  error: { icon: 'alert-circle' as const, dot: '#F87171' },
+  info: { icon: 'information-circle' as const, dot: '#FDBA74' },
 };
 
 // In-app toasts and confirm dialogs, used instead of the system Alert box.
@@ -117,34 +117,41 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// Minimal dark pill at the top: coloured icon, one-line title, optional short message. Tap to dismiss.
 function ToastView({ toast, onDone }: { toast: Toast; onDone: () => void }) {
   const insets = useSafeAreaInsets();
-  const y = useRef(new Animated.Value(-120)).current;
+  const anim = useRef(new Animated.Value(0)).current;
   const k = KIND[toast.kind];
 
   useEffect(() => {
-    Animated.spring(y, { toValue: 0, useNativeDriver: true, bounciness: 4 }).start();
-    const t = setTimeout(hide, toast.kind === 'error' ? 4000 : 2600);
+    Animated.timing(anim, { toValue: 1, duration: 220, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
+    const t = setTimeout(hide, toast.kind === 'info' ? 5000 : toast.kind === 'error' ? 3600 : 2400);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function hide() {
-    Animated.timing(y, { toValue: -140, duration: 200, useNativeDriver: true }).start(onDone);
+    Animated.timing(anim, { toValue: 0, duration: 180, easing: Easing.in(Easing.cubic), useNativeDriver: true }).start(onDone);
   }
+
+  const translateY = anim.interpolate({ inputRange: [0, 1], outputRange: [-14, 0] });
 
   return (
     <Animated.View
       pointerEvents="box-none"
-      style={[s.toastWrap, { top: insets.top + 8, left: 16 + insets.left, right: 16 + insets.right, transform: [{ translateY: y }] }]}
+      style={[s.toastWrap, { top: insets.top + 10, left: 16 + insets.left, right: 16 + insets.right, opacity: anim, transform: [{ translateY }] }]}
     >
-      <Pressable onPress={hide} style={[s.toast, { borderLeftColor: k.color }]}>
-        <View style={[s.tIcon, { backgroundColor: k.bg }]}>
-          <Ionicons name={k.icon} size={20} color={k.color} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={s.tTitle}>{toast.title}</Text>
-          {toast.message ? <Text style={s.tMsg}>{toast.message}</Text> : null}
+      <Pressable onPress={hide} style={s.toast} accessibilityRole="alert">
+        <Ionicons name={k.icon} size={18} color={k.dot} />
+        <View style={{ flexShrink: 1 }}>
+          <Text style={s.tTitle} numberOfLines={1}>
+            {toast.title}
+          </Text>
+          {toast.message ? (
+            <Text style={s.tMsg} numberOfLines={toast.kind === 'info' ? 4 : 2}>
+              {toast.message}
+            </Text>
+          ) : null}
         </View>
       </Pressable>
     </Animated.View>
@@ -158,20 +165,21 @@ export function useFeedback() {
 }
 
 const s = StyleSheet.create({
-  toastWrap: { position: 'absolute', zIndex: 1000, elevation: 1000 },
+  toastWrap: { position: 'absolute', zIndex: 1000, elevation: 1000, alignItems: 'center' },
   toast: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    backgroundColor: '#fff',
-    borderRadius: radius.md,
-    padding: 12,
-    borderLeftWidth: 4,
+    gap: 10,
+    maxWidth: 420,
+    backgroundColor: '#1F1A17',
+    borderRadius: 14,
+    paddingVertical: 11,
+    paddingLeft: 14,
+    paddingRight: 18,
     ...shadow(3),
   },
-  tIcon: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  tTitle: { fontWeight: '700', fontSize: 14 },
-  tMsg: { color: colors.muted, fontSize: 13, marginTop: 1 },
+  tTitle: { color: '#fff', fontWeight: '600', fontSize: 14 },
+  tMsg: { color: 'rgba(255,255,255,0.72)', fontSize: 12.5, marginTop: 1, lineHeight: 17 },
   backdrop: { flex: 1, backgroundColor: 'rgba(28,25,23,0.5)', justifyContent: 'center', padding: 28 },
   dialog: { backgroundColor: '#fff', borderRadius: radius.xl, padding: 22, ...shadow(3) },
   dIcon: { width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
