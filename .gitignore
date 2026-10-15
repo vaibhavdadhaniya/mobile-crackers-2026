@@ -42,3 +42,6 @@ yarn-error.*
 
 # Public server certificate used by plugins/withServerCert.js (no private key)
 !certs/*.pem
+
+# Android release signing (keystore + passwords), read by plugins/withReleaseSigning.js
+/keystore/
