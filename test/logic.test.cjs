@@ -179,6 +179,13 @@ describe('notification taps', () => {
     assert.equal(nav.notificationRoute('request_rejected', false), '/user/request');
     assert.equal(nav.notificationRoute('admin_granted', false), null);
   });
+  it('kit transfer requests open the screen where they can be answered', () => {
+    assert.equal(nav.notificationRoute('kit_transfer_request', false), '/user');
+    assert.equal(nav.notificationRoute('kit_transfer_request', true), '/admin');
+    assert.equal(nav.notificationRoute('kit_transfer_accepted', false), '/user/activity');
+    assert.equal(nav.notificationRoute('kit_transfer_rejected', true), '/admin/transfer');
+    assert.equal(nav.notificationRoute('kit_transfer_cancelled', false), '/user/transfer');
+  });
 });
 
 describe('app update & maintenance (Firestore)', () => {

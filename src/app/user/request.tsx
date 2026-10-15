@@ -22,7 +22,8 @@ export default function RequestKits() {
   const [qty, setQty] = useState('');
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
-  const balance = me?.balance ?? 0;
+  // Kits on hold for pending outgoing transfers cannot be sold or returned.
+  const balance = Math.max(0, (me?.balance ?? 0) - (me?.kitsOnHold ?? 0));
   const isReturn = mode === 'return';
 
   useEffect(() => {
