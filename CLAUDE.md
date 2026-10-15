@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-An Expo SDK 57 / React Native 0.86 app (Expo Router, TypeScript strict) for tracking distribution and sales of firecracker kits and the money collected from them (display name "Shree Hari Crackers"; slug `fatakda-kit`; iOS bundle id `com.app.hpym2024`, Android package `com.app.hpym_2024`, which must match the Firebase files `GoogleService-Info.plist` / `google-services.json` referenced from `app.json`). There is no backend in this repo; the app talks to a separate REST server whose address is fixed at build time in `app.json` → `expo.extra.apiUrl` (there is no runtime override). The project uses npm (`package-lock.json`), so use `npx`, not `bunx`.
+An Expo SDK 57 / React Native 0.86 app (Expo Router, TypeScript strict) for tracking distribution and sales of firecracker kits and the money collected from them (display name "Shree Hari Crackers"; slug `fatakda-kit`; iOS bundle id `com.app.hpym2024`, Android package `com.app.hpym_2024`, which must match the Firebase files `GoogleService-Info.plist` / `google-services.json` referenced from `app.json`). There is no backend in this repo; the app talks to a separate REST server. In `__DEV__` builds `api.ts` targets the machine running Metro (`http://<hostUri host>:<extra.devApiPort ?? 4000>`), so a local backend must be running there; release builds use `app.json` → `expo.extra.apiUrl` (no runtime override). The project uses npm (`package-lock.json`), so use `npx`, not `bunx`.
 
 ## Commands
 
@@ -31,12 +31,13 @@ No ESLint config is committed yet; `npx expo lint` will scaffold one on first ru
 - On a 401 (non-`/auth/` path) it refreshes once via a single shared in-flight `refreshSession()` and retries. Only a rejected refresh or `code: 'ACCOUNT_DISABLED'` ends the session; network failures never log the user out (status `0` `ApiError`).
 - `AuthProvider` (`auth.tsx`) loads stored tokens on boot, fetches `/me` (profile + counters like balance, unread notifications, pending requests), re-validates on app foreground, and polls `/me` every 30s. Use `useAuth().refreshMe()` after mutations that affect those counters.
 - `session.ts` contains pure JWT-expiry / 401-policy helpers (unit tested).
+- `push.ts` registers the device's native FCM token with the backend on login and unregisters it on sign-out (called from `auth.tsx`). Android only for now (iOS push not configured); no-op in Expo Go. Its channel id must match the backend's `android.notification.channelId`.
 
 ### Routing (`src/app/`)
 - Root `_layout.tsx` gates screens with `Stack.Protected` on `token` and `user.isAdmin`: `login` (logged out), `admin/` tab group + `stock`/`sell`/`holders` (admins), `user/` tab group (non-admins), and `notifications`/`wallet` (any logged-in user). `index.tsx` redirects to the right group.
 - While a saved session exists but `/me` hasn't loaded, the root shows `Loading` or `Offline` (when `bootError` is set).
 - Tab groups use `AppTabs` + `tab(title, headerTitle, subtitle, showHeader)` from `components/tabs.tsx` (custom `TabBar`, gradient `AppHeader`). Stack screens use the `stackHeader()` helper in the root layout.
-- Screens shared between roles live in `src/screens/` and route files just re-export them (e.g. `app/sell.tsx`, `app/user/sell.tsx`, `app/admin/transfer.tsx`, `app/user/transfer.tsx`).
+- Screens shared between roles live in `src/screens/` and route files just re-export them (e.g. `app/sell.tsx`, `app/user/sell.tsx`, `app/admin/transfer.tsx`, `app/user/transfer.tsx`), or render them with a role prop (`<ActivityScreen admin />` in `app/admin/activity.tsx`).
 
 ### App update & maintenance gate (`src/update.ts`, `components/UpdateGate.tsx`, `components/AppUpdateForm.tsx`)
 - After the intro animation, the root renders `UpdateGate`, which reads the Firestore document `AppConfig/GlobalSettings` **directly via the Firestore REST API** (project/db/key from `app.json` → `extra.firebase`, no Firebase SDK) on start and on every foreground. It shows a maintenance screen (admins exempt) or an optional/forced update prompt. Android compares `androidBuildNumber` with the native build number (versionCode). iOS compares `iosVersion` with the native version first, and `iosBuildNumber` with the build number only within the same version, because iOS releases usually bump just the build and a new version may restart it. Failures are silent and never block the app.
