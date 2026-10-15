@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,6 +9,7 @@ import { Banner, Card, Empty, IconName, IconTile, LinkText, Row, Screen, Section
 import { AppHeader } from '../../components/AppHeader';
 import { BarChart, ProgressBar } from '../../components/Charts';
 import { TxnItem } from '../../components/TxnItem';
+import { KitTransferRequests } from '../../components/KitTransfers';
 import { colors, radius } from '../../theme';
 import { dateLabel, money, num, rupees } from '../../format';
 
@@ -22,6 +23,7 @@ export default function AdminDashboard() {
   const { data: a, error, refreshing, refresh } = useApi<Analytics>('/admin/analytics');
   const wallet = useApi<Wallet>('/wallet');
   const moneyIn = wallet.data?.pendingIncoming ?? me?.pendingMoneyIn ?? 0;
+  const [refreshKey, setRefreshKey] = useState(0);
   useFocusEffect(useCallback(() => void refreshMe(), [refreshMe]));
 
   return (
@@ -33,9 +35,12 @@ export default function AdminDashboard() {
           refresh();
           refreshMe();
           wallet.reload();
+          setRefreshKey((k) => k + 1);
         }}
       >
         {error ? <Banner text={error} /> : null}
+
+        <KitTransferRequests box="in" refreshKey={refreshKey} onChanged={refresh} />
 
         <View style={s.actions}>
           <Action icon="add" label="Add stock" tone="primary" onPress={() => router.push('/stock')} />

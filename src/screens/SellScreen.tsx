@@ -23,7 +23,8 @@ export default function SellScreen() {
   const [results, setResults] = useState<Reg[]>([]);
   const [searching, setSearching] = useState(false);
   const seq = useRef(0);
-  const balance = me?.balance ?? 0;
+  // Kits on hold for pending outgoing transfers cannot be sold or returned.
+  const balance = Math.max(0, (me?.balance ?? 0) - (me?.kitsOnHold ?? 0));
   const price = me?.kitPrice ?? 0;
   const amount = qty * price;
 

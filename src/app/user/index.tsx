@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,6 +8,7 @@ import { useApi } from '../../hooks';
 import { Button, Card, Empty, IconName, IconTile, LinkText, Row, Screen, SectionTitle, Stat, tap, Text, tones } from '../../components/ui';
 import { AppHeader } from '../../components/AppHeader';
 import { TxnItem } from '../../components/TxnItem';
+import { KitTransferRequests } from '../../components/KitTransfers';
 import { useFeedback } from '../../components/Feedback';
 import { colors, radius } from '../../theme';
 import { dateLabel, money, num, roleLabel, rupees, timeAgo } from '../../format';
@@ -17,9 +18,13 @@ export default function UserHome() {
   const fb = useFeedback();
   const notes = useApi<Notification[]>('/notifications');
   const history = useApi<Txn[]>('/kits/history?limit=5');
+  const [refreshKey, setRefreshKey] = useState(0);
+  const onHold = me?.kitsOnHold ?? 0;
+  const available = Math.max(0, (me?.balance ?? 0) - onHold);
   useFocusEffect(useCallback(() => void refreshMe(), [refreshMe]));
 
-  const unread = (notes.data ?? []).filter((n) => !n.read_at).slice(0, 3);
+  // Incoming kit transfers have their own Accept / Decline cards below, so skip their notices.
+  const unread = (notes.data ?? []).filter((n) => !n.read_at && n.type !== 'kit_transfer_request').slice(0, 3);
 
   const dismiss = async (id: string) => {
     tap();
@@ -43,8 +48,11 @@ export default function UserHome() {
           refreshMe();
           notes.refresh();
           history.reload();
+          setRefreshKey((k) => k + 1);
         }}
       >
+        <KitTransferRequests box="in" refreshKey={refreshKey} onChanged={() => history.reload()} />
+
         <Card>
           <View style={s.kitsHead}>
             <Text style={s.kitsTitle}>My kits</Text>
@@ -57,11 +65,11 @@ export default function UserHome() {
             <View style={s.kitsDivider} />
             <KitCount label="Sold" value={me?.soldQty} color={colors.success} />
             <View style={s.kitsDivider} />
-            <KitCount label="Available" value={me?.balance} color={colors.primary} big />
+            <KitCount label="Available" value={available} color={colors.primary} big />
           </View>
           <View style={s.kitsFoot}>
             <Text style={s.balMeta}>Sales value {money(me?.soldAmount)}</Text>
-            {me?.sentQty ? <Text style={s.balMeta}>{num(me.sentQty)} transferred to others</Text> : null}
+            {onHold ? <Text style={s.balMeta}>{num(onHold)} on hold for transfer</Text> : me?.sentQty ? <Text style={s.balMeta}>{num(me.sentQty)} transferred to others</Text> : null}
           </View>
         </Card>
 
@@ -97,7 +105,7 @@ export default function UserHome() {
 
         {unread.map((n) => (
           <View key={n.id} style={s.notice}>
-            <IconTile icon={n.type.includes('rejected') ? 'close' : n.type.startsWith('money') ? 'wallet-outline' : n.type === 'kit_received' ? 'download-outline' : 'checkmark'} tone={n.type.includes('rejected') ? 'danger' : n.type === 'money_request' ? 'warning' : 'success'} size={34} />
+            <IconTile icon={n.type.includes('rejected') || n.type.includes('cancelled') ? 'close' : n.type.startsWith('money') ? 'wallet-outline' : n.type === 'kit_received' ? 'download-outline' : 'checkmark'} tone={n.type.includes('rejected') || n.type.includes('cancelled') ? 'danger' : n.type === 'money_request' ? 'warning' : 'success'} size={34} />
             <View style={{ flex: 1 }}>
               <Text style={s.noticeTitle}>{n.title}</Text>
               <Text style={s.noticeBody}>{n.body}</Text>
@@ -113,7 +121,7 @@ export default function UserHome() {
         ))}
 
 
-        {(me?.balance ?? 0) === 0 && (
+        {(me?.balance ?? 0) === 0 && !(me?.pendingKitsIn ?? 0) && (
           <Card style={s.emptyKits}>
             <View style={{ flex: 1 }}>
               <Text style={{ fontWeight: '600' }}>No kits in hand</Text>

@@ -13,6 +13,10 @@ import { timeAgo } from '../format';
 
 const ICONS: Record<string, { icon: IconName; tone: keyof typeof tones }> = {
   kit_received: { icon: 'download-outline', tone: 'success' },
+  kit_transfer_request: { icon: 'download-outline', tone: 'warning' },
+  kit_transfer_accepted: { icon: 'checkmark-circle-outline', tone: 'success' },
+  kit_transfer_rejected: { icon: 'close-circle-outline', tone: 'danger' },
+  kit_transfer_cancelled: { icon: 'close-circle-outline', tone: 'danger' },
   return_accepted: { icon: 'checkmark-circle-outline', tone: 'success' },
   kit_return: { icon: 'return-down-back', tone: 'info' },
   kit_request: { icon: 'file-tray-full-outline', tone: 'warning' },

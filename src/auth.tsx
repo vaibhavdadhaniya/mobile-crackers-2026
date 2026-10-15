@@ -30,7 +30,7 @@ type AuthState = {
 
 const AuthContext = createContext<AuthState | null>(null);
 
-const EMPTY_ME = { balance: 0, unreadNotifications: 0, pendingRequests: 0, walletBalance: 0, pendingMoneyIn: 0, soldQty: 0, receivedQty: 0, sentQty: 0, soldAmount: 0, kitPrice: 0, sellDeadline: null };
+const EMPTY_ME = { balance: 0, unreadNotifications: 0, pendingRequests: 0, walletBalance: 0, pendingMoneyIn: 0, pendingKitsIn: 0, kitsOnHold: 0, soldQty: 0, receivedQty: 0, sentQty: 0, soldAmount: 0, kitPrice: 0, sellDeadline: null };
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);

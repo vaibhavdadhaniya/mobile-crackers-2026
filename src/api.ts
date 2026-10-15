@@ -167,6 +167,8 @@ export type Me = {
   pendingRequests: number;
   walletBalance: number;
   pendingMoneyIn: number;
+  pendingKitsIn: number; // kit transfer requests waiting for my accept
+  kitsOnHold: number; // my kits reserved by my pending outgoing transfer requests
   soldQty: number;
   receivedQty: number;
   sentQty: number;
@@ -300,6 +302,24 @@ export type MoneyTransfer = {
   from_user_id: string;
   from_name: string;
   from_phone: string;
+  to_user_id: string;
+  to_name: string;
+  to_phone: string;
+  direction: 'in' | 'out';
+};
+
+// Direct kit transfer waiting for (or answered by) the receiver.
+export type KitTransfer = {
+  id: string;
+  quantity: number;
+  note: string | null;
+  status: 'pending' | 'accepted' | 'rejected' | 'cancelled';
+  created_at: string;
+  responded_at: string | null;
+  from_user_id: string;
+  from_name: string;
+  from_phone: string;
+  from_admin: boolean;
   to_user_id: string;
   to_name: string;
   to_phone: string;
