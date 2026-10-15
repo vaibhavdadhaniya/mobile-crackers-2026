@@ -1,58 +1,54 @@
-// Expo config plugin: sign release builds with the app's own keystore instead of the debug key.
-// Reads <project>/keystore/key.properties (storeFile, storePassword, keyAlias, keyPassword);
-// storeFile is relative to the keystore folder. Neither file is committed (see .gitignore).
-// If key.properties is missing, release falls back to the debug key so the build still works.
-// A plugin is needed because `expo prebuild` regenerates android/app/build.gradle.
+// Signs release builds with our own upload keystore instead of the debug key, so installed
+// APKs can be updated in place. Values come from keystore/key.properties in the project root
+// (gitignored, outside android/ so prebuild never deletes it):
+//   storeFile=shree-hari-release.jks   (relative to the keystore/ folder)
+//   storePassword=...
+//   keyAlias=shree-hari
+//   keyPassword=...
+// Without keystore/key.properties, release builds fall back to the debug key.
 const { withAppBuildGradle } = require('expo/config-plugins');
 
-const MARK = '// withReleaseSigning';
-
-function apply(src) {
-  if (src.includes(MARK)) return src;
-
-  const loader = `${MARK}: load ../keystore/key.properties (relative to android/)
-def kitKeystorePropsFile = rootProject.file("../keystore/key.properties")
-def kitKeystoreProps = new Properties()
-if (kitKeystorePropsFile.exists()) {
-    kitKeystorePropsFile.withInputStream { kitKeystoreProps.load(it) }
+const LOAD_KEY_PROPERTIES = `def keystoreProperties = new Properties()
+def keystorePropertiesFile = new File(rootDir.parentFile, 'keystore/key.properties')
+if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.withInputStream { keystoreProperties.load(it) }
 }
 
 android {`;
-  if (!/^android \{/m.test(src)) throw new Error('withReleaseSigning: "android {" block not found in app/build.gradle');
-  src = src.replace(/^android \{/m, loader);
 
-  const releaseConfig = `signingConfigs {
+const RELEASE_SIGNING_CONFIG = `
         release {
-            if (kitKeystorePropsFile.exists()) {
-                storeFile new File(kitKeystorePropsFile.parentFile, kitKeystoreProps['storeFile'])
-                storePassword kitKeystoreProps['storePassword']
-                keyAlias kitKeystoreProps['keyAlias']
-                keyPassword kitKeystoreProps['keyPassword']
+            if (keystorePropertiesFile.exists()) {
+                storeFile new File(keystorePropertiesFile.parentFile, keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
             }
         }`;
-  if (!/signingConfigs \{/.test(src)) throw new Error('withReleaseSigning: signingConfigs block not found');
-  src = src.replace(/signingConfigs \{/, releaseConfig);
 
-  // In buildTypes.release, swap the debug signing for the release one (when the keystore exists).
-  const releaseType = /(release \{[\s\S]*?)signingConfig signingConfigs\.debug/;
-  if (!releaseType.test(src.slice(src.indexOf('buildTypes')))) {
-    throw new Error('withReleaseSigning: release buildType signingConfig not found');
-  }
-  const i = src.indexOf('buildTypes');
-  src =
-    src.slice(0, i) +
-    src
-      .slice(i)
-      .replace(releaseType, '$1signingConfig kitKeystorePropsFile.exists() ? signingConfigs.release : signingConfigs.debug');
-  return src;
-}
+const RELEASE_BUILD_TYPE_SIGNING = /(release \{\n(?:\s*\/\/.*\n)*\s*)signingConfig signingConfigs\.debug/;
 
 module.exports = function withReleaseSigning(config) {
   return withAppBuildGradle(config, (cfg) => {
-    if (cfg.modResults.language !== 'groovy') throw new Error('withReleaseSigning: expected a Groovy build.gradle');
-    cfg.modResults.contents = apply(cfg.modResults.contents);
+    const src = cfg.modResults.contents;
+    if (src.includes('keystorePropertiesFile')) return cfg;
+
+    const next = src
+      .replace(/^android \{/m, LOAD_KEY_PROPERTIES)
+      .replace('signingConfigs {', `signingConfigs {${RELEASE_SIGNING_CONFIG}`)
+      .replace(
+        RELEASE_BUILD_TYPE_SIGNING,
+        '$1signingConfig keystorePropertiesFile.exists() ? signingConfigs.release : signingConfigs.debug'
+      );
+
+    if (
+      !next.includes("'keystore/key.properties'") ||
+      !next.includes("storeFile new File(keystorePropertiesFile.parentFile, keystoreProperties['storeFile'])") ||
+      !next.includes('signingConfigs.release')
+    ) {
+      throw new Error('withReleaseSigning: app/build.gradle template changed; update the plugin');
+    }
+    cfg.modResults.contents = next;
     return cfg;
   });
 };
-
-module.exports.apply = apply;
