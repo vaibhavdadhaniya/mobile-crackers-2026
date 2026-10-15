@@ -75,7 +75,8 @@
         {
           "color": "#F97316"
         }
-      ]
+      ],
+      "./plugins/withReleaseSigning"
     ],
     "experiments": {
       "typedRoutes": true
