@@ -22,7 +22,7 @@
       }
     },
     "android": {
-      "package": "com.app.hpym_2024",
+      "package": "com.stock.crackers",
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#8B0005",
@@ -52,6 +52,7 @@
       "expo-font",
       "./plugins/with-scene-lifecycle",
       "./plugins/withReleaseSigning",
+      ["./plugins/withAndroidAppName", { "name": "Cracker Stock" }],
       [
         "expo-splash-screen",
         {

@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-An Expo SDK 57 / React Native 0.86 app (Expo Router, TypeScript strict) for tracking distribution and sales of firecracker kits and the money collected from them (display name "Shree Hari Crackers"; slug `fatakda-kit`; iOS bundle id `com.app.hpym2024`, Android package `com.app.hpym_2024`, which must match the Firebase files `GoogleService-Info.plist` / `google-services.json` referenced from `app.json`). There is no backend in this repo; the app talks to a separate REST server. In `__DEV__` builds `api.ts` targets the machine running Metro (`http://<hostUri host>:<extra.devApiPort ?? 4000>`), so a local backend must be running there; release builds use `app.json` → `expo.extra.apiUrl` (no runtime override). The project uses npm (`package-lock.json`), so use `npx`, not `bunx`.
+An Expo SDK 57 / React Native 0.86 app (Expo Router, TypeScript strict) for tracking distribution and sales of firecracker kits and the money collected from them (display name "Shree Hari Crackers"; slug `fatakda-kit`; iOS bundle id `com.app.hpym2024`, Android package `com.stock.crackers`, which must match the Firebase files `GoogleService-Info.plist` / `google-services.json` referenced from `app.json`). There is no backend in this repo; the app talks to a separate REST server. In `__DEV__` builds `api.ts` targets the machine running Metro (`http://<hostUri host>:<extra.devApiPort ?? 4000>`), so a local backend must be running there; release builds use `app.json` → `expo.extra.apiUrl` (no runtime override). The project uses npm (`package-lock.json`), so use `npx`, not `bunx`.
 
 ## Commands
 
@@ -63,6 +63,8 @@ No ESLint config is committed yet; `npx expo lint` will scaffold one on first ru
 - `withServerCert.js` — trusts the API server's self-signed cert(s) (`certs/*.pem`, committed; listed in `app.json`) only for the listed hosts. Android: network-security-config. iOS: generates `ServerCertTrust.m`, which adds a server-trust challenge handler to **expo/fetch's** session delegate (`ExpoModulesCore.URLSessionSessionDelegateProxy`, because Expo SDK 57 replaces global `fetch`) and to RN's `RCTHTTPRequestHandler`. It accepts a byte-identical match with the bundled cert, since the server cert lacks the serverAuth EKU that Apple's SSL policy requires. This only works while ATS is relaxed: keep `NSAllowsArbitraryLoads: true` and do **not** add `NSAllowsLocalNetworking` (or the other ATS sub-keys) — their presence makes iOS ignore `NSAllowsArbitraryLoads`, and ATS then rejects the cert before the handler runs (`-1200`/`-9802`, "ATS failed system trust"). When the server cert is replaced, update `certs/server_cert.pem` and rebuild both platforms.
 
 - `withReleaseSigning.js` — signs Android release builds with the upload keystore when `keystore/key.properties` exists in the project root (`storeFile` relative to `keystore/`, `storePassword`, `keyAlias`, `keyPassword`); otherwise falls back to the debug key. `keystore/` is gitignored. Never keep signing files in `android/`: `expo prebuild` regenerates that folder (even without `--clean`) and deletes anything in it.
+
+- `withAndroidAppName.js` — sets the Android launcher label (`app_name`) from its `name` option, independent of `expo.name` (which also names the iOS project). iOS shows `ios.infoPlist.CFBundleDisplayName` instead.
 
 `expo-build-properties` limits Android builds to `armeabi-v7a`/`arm64-v8a` (no x86 emulators) to keep the sideloaded APK small.
 
