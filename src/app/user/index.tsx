@@ -5,7 +5,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { api, Notification, Txn } from '../../api';
 import { useAuth } from '../../auth';
 import { useApi } from '../../hooks';
-import { Button, Card, Empty, IconName, IconTile, LinkText, Row, Screen, SectionTitle, Stat, tap, Text, tones } from '../../components/ui';
+import { Button, Card, Empty, IconName, IconTile, LinkText, Row, Screen, SectionTitle, Segmented, Stat, tap, Text, tones } from '../../components/ui';
+import { SabhaDashboard } from '../../screens/SabhaDashboard';
 import { AppHeader } from '../../components/AppHeader';
 import { TxnItem } from '../../components/TxnItem';
 import { KitTransferRequests } from '../../components/KitTransfers';
@@ -19,6 +20,9 @@ export default function UserHome() {
   const notes = useApi<Notification[]>('/notifications');
   const history = useApi<Txn[]>('/kits/history?limit=5');
   const [refreshKey, setRefreshKey] = useState(0);
+  // Sabha Admins open on their sabha dashboard and can switch to their own kits.
+  const isSabhaAdmin = me?.user.role === 'sabha_admin';
+  const [view, setView] = useState<'sabha' | 'mine'>('sabha');
   const onHold = me?.kitsOnHold ?? 0;
   const available = Math.max(0, (me?.balance ?? 0) - onHold);
   useFocusEffect(useCallback(() => void refreshMe(), [refreshMe]));
@@ -52,6 +56,22 @@ export default function UserHome() {
         }}
       >
         <KitTransferRequests box="in" refreshKey={refreshKey} onChanged={() => history.reload()} />
+
+        {isSabhaAdmin && (
+          <Segmented
+            options={[
+              { key: 'sabha', label: 'My Sabha' },
+              { key: 'mine', label: 'My kits' },
+            ]}
+            value={view}
+            onChange={setView}
+          />
+        )}
+
+        {isSabhaAdmin && view === 'sabha' ? (
+          <SabhaDashboard refreshKey={refreshKey} />
+        ) : (
+        <>
 
         <Card>
           <View style={s.kitsHead}>
@@ -136,6 +156,8 @@ export default function UserHome() {
           {history.data && history.data.length === 0 && <Empty icon="time-outline" text="No activity yet" />}
           {history.data?.map((t) => <TxnItem key={t.id} t={t} perspective="self" />)}
         </Card>
+        </>
+        )}
 
         <Button title="Sign out" variant="outline" icon="log-out-outline" onPress={onLogout} />
       </Screen>

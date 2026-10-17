@@ -328,6 +328,31 @@ export type KitTransfer = {
 
 export type WalletEntry = { id: string; type: 'sale' | 'transfer_in' | 'transfer_out'; amount: number; note: string | null; created_at: string };
 
+// GET /sabha/dashboard (Sabha Admin only): stats of the admin's own sabha.
+export type SabhaMember = { id: string; name: string; phone: string; role: string; balance: number; sold: number; amount: number; wallet: number };
+export type SabhaDashboard = {
+  sabha: { id: string; name: string; zoneName: string | null };
+  totals: {
+    members: number;
+    activeHolders: number;
+    sellers: number;
+    withMembers: number;
+    received: number;
+    sold: number;
+    revenue: number;
+    saleCount: number;
+    soldToday: number;
+    soldLast7: number;
+    cashInWallets: number;
+    pendingRequests: number;
+    sellThroughPct: number | null;
+  };
+  config: { kitPrice: number; sellDeadline: string | null; daysLeft: number | null };
+  dailySales: { day: string; qty: number }[];
+  members: SabhaMember[];
+  recent: Txn[];
+};
+
 export type AppConfigSettings = {
   androidVersion?: string;
   androidBuildNumber?: number;
