@@ -24,6 +24,9 @@ const RELEASE_SIGNING_CONFIG = `
                 keyAlias keystoreProperties['keyAlias']
                 keyPassword keystoreProperties['keyPassword']
             }
+            // Some OEM installers (ColorOS/realme) fail to parse v2-only APKs when sideloaded.
+            enableV1Signing true
+            enableV2Signing true
         }`;
 
 const RELEASE_BUILD_TYPE_SIGNING = /(release \{\n(?:\s*\/\/.*\n)*\s*)signingConfig signingConfigs\.debug/;

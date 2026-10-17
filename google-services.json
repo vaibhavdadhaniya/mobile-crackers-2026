@@ -8,9 +8,9 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:206987229730:android:3fd138bde95216df56687b",
+        "mobilesdk_app_id": "1:206987229730:android:c92c976c6407d99056687b",
         "android_client_info": {
-          "package_name": "com.app.hpym_2024"
+          "package_name": "com.stock.crackers"
         }
       },
       "oauth_client": [],
