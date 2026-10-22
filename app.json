@@ -45,14 +45,22 @@
         {
           "android": {
             "usesCleartextTraffic": true,
-            "buildArchs": ["armeabi-v7a", "arm64-v8a"]
+            "buildArchs": [
+              "armeabi-v7a",
+              "arm64-v8a"
+            ]
           }
         }
       ],
       "expo-font",
       "./plugins/with-scene-lifecycle",
       "./plugins/withReleaseSigning",
-      ["./plugins/withAndroidAppName", { "name": "Cracker Stock" }],
+      [
+        "./plugins/withAndroidAppName",
+        {
+          "name": "Cracker Stock"
+        }
+      ],
       [
         "expo-splash-screen",
         {
@@ -79,7 +87,15 @@
           "color": "#F97316"
         }
       ],
-      "./plugins/withReleaseSigning"
+      "expo-sharing",
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Allow Shree Hari Crackers to save report images to your photos.",
+          "savePhotosPermission": "Allow Shree Hari Crackers to save report images to your photos.",
+          "isAccessMediaLocationEnabled": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

@@ -43,6 +43,8 @@ function RootStack() {
         <Stack.Screen name="stock" options={stackHeader('Manage Stock', 'Central inventory')} />
         <Stack.Screen name="sell" options={stackHeader('Sell Kits', 'Record a customer sale')} />
         <Stack.Screen name="holders" options={stackHeader('Holders & Sellers')} />
+        <Stack.Screen name="reports" options={stackHeader('Reports', 'Zone report and my transfers')} />
+        <Stack.Screen name="teams" options={stackHeader('Kits with users', 'Teams · tap a team for its karyakartas')} />
       </Stack.Protected>
 
       <Stack.Protected guard={!!token && !isAdmin}>

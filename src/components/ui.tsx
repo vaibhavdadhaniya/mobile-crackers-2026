@@ -199,27 +199,64 @@ export const tones = {
   neutral: { bg: '#F1EFEC', fg: colors.muted },
 };
 
-export function Stat({ label, value, icon, tone = 'primary', sub }: { label: string; value: string; icon: IconName; tone?: keyof typeof tones; sub?: string }) {
+// Dashboard number tile. Optional: a small coloured badge next to the value (e.g. '−100'),
+// and onPress (shows a chevron) to open a drill-down.
+export function Stat({
+  label,
+  value,
+  icon,
+  tone = 'primary',
+  sub,
+  badge,
+  onPress,
+}: {
+  label: string;
+  value: string;
+  icon: IconName;
+  tone?: keyof typeof tones;
+  sub?: string;
+  badge?: { text: string; tone: keyof typeof tones };
+  onPress?: () => void;
+}) {
   const t = tones[tone];
-  return (
-    <View style={styles.stat}>
+  const body = (
+    <>
       <View style={styles.statHead}>
         <Text style={styles.statLabel} numberOfLines={1}>
           {label}
         </Text>
         <View style={[styles.statIcon, { backgroundColor: t.bg }]}>
-          <Ionicons name={icon} size={14} color={t.fg} />
+          <Ionicons name={onPress ? 'chevron-forward' : icon} size={14} color={t.fg} />
         </View>
       </View>
-      <Text style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit>
-        {value}
-      </Text>
+      <View style={styles.statValueRow}>
+        <Text style={[styles.statValue, { flexShrink: 1 }]} numberOfLines={1} adjustsFontSizeToFit>
+          {value}
+        </Text>
+        {badge ? (
+          <View style={[styles.statBadge, { backgroundColor: tones[badge.tone].bg }]}>
+            <Text style={[styles.statBadgeText, { color: tones[badge.tone].fg }]}>{badge.text}</Text>
+          </View>
+        ) : null}
+      </View>
       {sub ? (
         <Text style={styles.statSub} numberOfLines={1}>
           {sub}
         </Text>
       ) : null}
-    </View>
+    </>
+  );
+  if (!onPress) return <View style={styles.stat}>{body}</View>;
+  return (
+    <Pressable
+      onPress={() => {
+        tap();
+        onPress();
+      }}
+      style={({ pressed }) => [styles.stat, pressed && { opacity: 0.7 }]}
+    >
+      {body}
+    </Pressable>
   );
 }
 
@@ -400,6 +437,9 @@ export const styles = StyleSheet.create({
   statHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6, marginBottom: 6 },
   statIcon: { width: 26, height: 26, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   statValue: { fontSize: 20, fontWeight: '700' },
+  statValueRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  statBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
+  statBadgeText: { fontSize: 11.5, fontWeight: '700' },
   statLabel: { fontSize: 12, color: colors.muted, fontWeight: '500', flexShrink: 1 },
   statSub: { fontSize: 11, color: colors.faint, marginTop: 2 },
   iconTile: { alignItems: 'center', justifyContent: 'center' },

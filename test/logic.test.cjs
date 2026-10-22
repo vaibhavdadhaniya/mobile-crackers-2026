@@ -179,6 +179,10 @@ describe('notification taps', () => {
     assert.equal(nav.notificationRoute('request_rejected', false), '/user/request');
     assert.equal(nav.notificationRoute('admin_granted', false), null);
   });
+  it('sale edited / deleted open the history', () => {
+    assert.equal(nav.notificationRoute('sale_edited', false), '/user/activity');
+    assert.equal(nav.notificationRoute('sale_deleted', true), '/admin/activity');
+  });
   it('kit transfer requests open the screen where they can be answered', () => {
     assert.equal(nav.notificationRoute('kit_transfer_request', false), '/user');
     assert.equal(nav.notificationRoute('kit_transfer_request', true), '/admin');
@@ -251,5 +255,90 @@ describe('app update & maintenance (Firestore)', () => {
     assert.equal(upd.inMaintenance(on, false), true);
     assert.equal(upd.inMaintenance(on, true), false);
     assert.equal(upd.inMaintenance({ is_maintenance: false }, false), false);
+  });
+});
+
+describe('kits with users: zone > sabha > team grouping', () => {
+  const { groupTeams } = loadTs('src/teamGroups.ts');
+  const t = (key, zone, sabha, holding, sold) => ({ key, name: key, zone, sabha, holding, sold });
+  const rows = [
+    t('a', 'Bopal', 'Sanand', 5, 0),
+    t('b', 'Naroda', 'Nilkanth', 100, 4),
+    t('c', 'Bopal', 'Bopal', 30, 2),
+    t('d', 'Bopal', 'Bopal', 40, 0),
+    t('e', null, 'No sabha', 999, 0),
+    t('f', 'Naroda', 'Nilkanth', 1, 9),
+  ];
+  const g = groupTeams(rows);
+
+  it('nests zones, sabhas and teams with totals', () => {
+    assert.deepEqual(g.map((z) => [z.zone, z.holding, z.sold]), [['Naroda', 101, 13], ['Bopal', 75, 2], ['No zone', 999, 0]]);
+    const bopal = g.find((z) => z.zone === 'Bopal');
+    assert.deepEqual(bopal.sabhas.map((s) => [s.sabha, s.holding]), [['Bopal', 70], ['Sanand', 5]]);
+    assert.deepEqual(bopal.sabhas[0].teams.map((x) => x.key), ['d', 'c'], 'most kits first');
+  });
+
+  it('keeps users without a zone last even with the most kits', () => {
+    assert.equal(g[g.length - 1].zone, 'No zone');
+  });
+
+  it('empty input gives no groups', () => {
+    assert.deepEqual(groupTeams([]), []);
+  });
+
+  it('the Sabha Admin row comes first in its sabha, even with fewer kits', () => {
+    const rows2 = [t('team1', 'Z', 'S', 90, 0), { ...t('sa', 'Z', 'S', 5, 0), kind: 'admin', adminRole: 'Sabha Admin' }, t('team2', 'Z', 'S', 40, 0)];
+    assert.deepEqual(groupTeams(rows2)[0].sabhas[0].teams.map((x) => x.key), ['sa', 'team1', 'team2']);
+  });
+});
+
+describe('kits with users: active filter keeps the Sabha Admin', () => {
+  const { activeRows } = loadTs('src/teamGroups.ts');
+  const r = (key, sabha, holding, sold, kind) => ({ key, name: key, zone: 'Z', sabha, holding, sold, kind, adminRole: kind === 'admin' ? 'Sabha Admin' : null });
+  const rows = [
+    r('sa1', 'S1', 0, 0, 'admin'), r('team1', 'S1', 10, 0, 'team'), r('team2', 'S1', 0, 0, 'team'),
+    r('sa2', 'S2', 0, 0, 'admin'), r('team3', 'S2', 0, 0, 'team'),
+    r('sa3', 'S3', 5, 0, 'admin'),
+  ];
+  it('shows the 0-kit Sabha Admin of a shown sabha, hides empty teams and empty sabhas', () => {
+    assert.deepEqual(activeRows(rows).map((x) => x.key), ['sa1', 'team1', 'sa3']);
+  });
+});
+
+describe('kits with users: zone admins in the header, hidden rows', () => {
+  const { groupTeams } = loadTs('src/teamGroups.ts');
+  const r = (key, sabha, holding, kind, adminRole, person) => ({ key, name: person ? `${person} (${adminRole})` : key, zone: 'Z', sabha, holding, sold: 0, kind, adminRole, person });
+  const rows = [
+    r('t1', 'S1', 10, 'team'),
+    r('sa', 'S1', 0, 'admin', 'Sabha Admin', 'Srinath'),
+    r('za', 'S1', 60, 'admin', 'Zone Admin', 'Nimit'),
+    r('pa', 'S2', 0, 'admin', 'Pradesh Admin', 'Swamiji'),
+    r('none', 'S3', 5, 'none'),
+  ];
+  const [z] = groupTeams(rows);
+
+  it('puts the Zone Admin on the zone, not in a sabha', () => {
+    assert.deepEqual(z.zoneAdmins, [{ name: 'Nimit', holding: 60, sold: 0 }]);
+    assert.deepEqual(z.sabhas.map((s) => [s.sabha, s.teams.map((t) => t.key)]), [['S1', ['sa', 't1']]]);
+  });
+
+  it('hides Pradesh Admin and Without team rows but zone totals still count them', () => {
+    assert.ok(!z.sabhas.some((s) => s.teams.some((t) => t.key === 'pa' || t.key === 'none')));
+    assert.equal(z.holding, 75);
+    assert.equal(z.sabhas[0].holding, 10, 'sabha total = listed rows');
+  });
+});
+
+describe('dashboard central stock tile', () => {
+  const { centralStockTile } = loadTs('src/centralStock.ts');
+  it('subtracts kits on hold for pending transfers', () => {
+    assert.deepEqual(centralStockTile({ centralStock: 634, onHold: 50, onHoldCount: 2, requested: 0, requestCount: 0 }), { minus: 50, left: 584, sub: '584 left after 2 transfers' });
+  });
+  it('adds pending requests to the minus', () => {
+    const r = centralStockTile({ centralStock: 634, onHold: 50, onHoldCount: 2, requested: 100, requestCount: 1 });
+    assert.deepEqual([r.minus, r.left, r.sub], [150, 484, '484 left after 2 transfers & 1 request']);
+  });
+  it('nothing pending', () => {
+    assert.deepEqual(centralStockTile({ centralStock: 10, onHold: 0, onHoldCount: 0, requested: 0, requestCount: 0 }), { minus: 0, left: 10, sub: 'Nothing pending' });
   });
 });

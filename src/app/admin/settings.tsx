@@ -279,6 +279,7 @@ export default function AdminSettings() {
       <Card style={{ paddingVertical: 6 }}>
         <LinkRow icon="archive" tone="primary" label="Manage stock" sub={`Central stock: ${num(me?.balance)}`} onPress={() => router.push('/stock')} />
         <LinkRow icon="people" tone="warning" label="Holders & sellers" onPress={() => router.push('/holders')} />
+        <LinkRow icon="bar-chart" tone="info" label="Reports" sub="Zone report and my transfers · image or Excel" onPress={() => router.push('/reports')} />
         <LinkRow icon="cart" tone="success" label="Sell kits" onPress={() => router.push('/sell')} />
         <LinkRow icon="wallet" tone="primary" label="My wallet" sub={rupees(me?.walletBalance)} onPress={() => router.push('/wallet')} />
         <LinkRow icon="notifications" tone="info" label="Notifications" onPress={() => router.push('/notifications')} last />

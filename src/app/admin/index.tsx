@@ -10,6 +10,8 @@ import { AppHeader } from '../../components/AppHeader';
 import { BarChart, ProgressBar } from '../../components/Charts';
 import { TxnItem } from '../../components/TxnItem';
 import { KitTransferRequests } from '../../components/KitTransfers';
+import { TxnDetailSheet } from '../../components/TxnDetailSheet';
+import { centralStockTile } from '../../centralStock';
 import { colors, radius } from '../../theme';
 import { dateLabel, money, num, rupees } from '../../format';
 
@@ -24,6 +26,14 @@ export default function AdminDashboard() {
   const wallet = useApi<Wallet>('/wallet');
   const moneyIn = wallet.data?.pendingIncoming ?? me?.pendingMoneyIn ?? 0;
   const [refreshKey, setRefreshKey] = useState(0);
+  const [openTxn, setOpenTxn] = useState<string | null>(null);
+  const stock = centralStockTile({
+    centralStock: a?.totals.centralStock ?? 0,
+    onHold: a?.totals.centralOnHold ?? 0,
+    onHoldCount: a?.totals.centralOnHoldCount ?? 0,
+    requested: a?.totals.pendingRequestQty ?? 0,
+    requestCount: a?.totals.pendingRequests ?? 0,
+  });
   useFocusEffect(useCallback(() => void refreshMe(), [refreshMe]));
 
   return (
@@ -47,6 +57,7 @@ export default function AdminDashboard() {
           <Action icon="swap-horizontal" label="Transfer" tone="info" onPress={() => router.push('/admin/transfer')} />
           <Action icon="cart-outline" label="Sell" tone="success" onPress={() => router.push('/sell')} />
           <Action icon="wallet-outline" label="Wallet" tone="warning" badge={moneyIn} onPress={() => router.push('/wallet')} />
+          <Action icon="bar-chart-outline" label="Reports" tone="primary" onPress={() => router.push('/reports')} />
         </View>
 
         {a && (
@@ -94,8 +105,29 @@ export default function AdminDashboard() {
             )}
 
             <Row style={{ marginBottom: 10 }}>
-              <Stat label="Central stock" value={num(a.totals.centralStock)} icon="archive-outline" />
-              <Stat label="With users" value={num(a.totals.withUsers)} icon="people-outline" tone="info" sub={`${a.totals.activeHolders} holders`} />
+              {/* Kits on hold for pending transfers + kits asked for in pending requests: a minus. */}
+              <Stat
+                label="Central stock"
+                value={num(a.totals.centralStock)}
+                icon="archive-outline"
+                badge={stock.minus ? { text: `−${num(stock.minus)}`, tone: 'danger' } : undefined}
+                sub={stock.sub}
+                onPress={
+                  a.totals.centralOnHoldCount
+                    ? () => router.push('/admin/transfer')
+                    : a.totals.pendingRequests
+                      ? () => router.push('/admin/requests')
+                      : undefined
+                }
+              />
+              <Stat
+                label="With users"
+                value={num(a.totals.withUsers)}
+                icon="people-outline"
+                tone="info"
+                sub={`${a.totals.activeHolders} holders · tap for teams`}
+                onPress={() => router.push('/teams')}
+              />
             </Row>
             <Row style={{ marginBottom: 10 }}>
               <Stat label="Total sold" value={num(a.totals.sold)} icon="cart-outline" tone="success" sub={`${a.totals.saleCount} sales`} />
@@ -157,12 +189,15 @@ export default function AdminDashboard() {
               <SectionTitle right={<LinkText title="View all" onPress={() => router.push('/admin/activity')} />}>Recent activity</SectionTitle>
               {a.recent.length === 0 && <Empty icon="time-outline" text="No activity yet" />}
               {a.recent.slice(0, 5).map((t) => (
-                <TxnItem key={t.id} t={t} />
+                <Pressable key={t.id} onPress={() => setOpenTxn(t.id)} style={({ pressed }) => pressed && { opacity: 0.6 }}>
+                  <TxnItem t={t} />
+                </Pressable>
               ))}
             </Card>
           </>
         )}
       </Screen>
+      <TxnDetailSheet id={openTxn} onClose={() => setOpenTxn(null)} onChanged={() => { refresh(); refreshMe(); }} />
     </View>
   );
 }

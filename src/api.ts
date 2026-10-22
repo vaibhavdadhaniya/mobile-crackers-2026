@@ -256,6 +256,8 @@ export type Analytics = {
     pendingRequestQty: number;
     cashInWallets: number;
     cashPending: number;
+    centralOnHold?: number; // kits in pending transfers sent by kit admins
+    centralOnHoldCount?: number;
   };
   target: {
     kitPrice: number;
@@ -326,7 +328,7 @@ export type KitTransfer = {
   direction: 'in' | 'out';
 };
 
-export type WalletEntry = { id: string; type: 'sale' | 'transfer_in' | 'transfer_out'; amount: number; note: string | null; created_at: string };
+export type WalletEntry = { id: string; type: 'sale' | 'transfer_in' | 'transfer_out' | 'sale_adjust'; amount: number; note: string | null; created_at: string };
 
 // GET /sabha/dashboard (Sabha Admin only): stats of the admin's own sabha.
 export type SabhaMember = { id: string; name: string; phone: string; role: string; balance: number; sold: number; amount: number; wallet: number };
@@ -368,3 +370,64 @@ export type AppConfigSettings = {
   updatedBy?: string;
 };
 export type AppConfigResponse = { configured: boolean; settings: AppConfigSettings | null };
+
+// Kit management reports (GET /admin/reports/*).
+export type ReportZone = { id: string; name: string; kits?: number; sold?: number };
+export type TeamReportRow = {
+  key: string; sabha: string; team: string; members: number; holding: number; sold: number;
+  kind?: 'team' | 'admin'; // admin = the sabha's Sabha Admin (listed first); team = name of the person
+  adminRole?: string | null;
+};
+export type TeamReport = {
+  zone: ReportZone;
+  generatedAt: string;
+  rows: TeamReportRow[];
+  totals: { holding: number; sold: number };
+  filtered?: boolean; // limited to selected teams
+  zoneAdmins?: { name: string; holding: number; sold: number }[]; // shown in the header
+};
+export type MyTransferEntry = { no: number; at: string; direction: 'sent' | 'returned'; quantity: number; how: string; note: string | null };
+export type MyTransfersReport = {
+  sender: { id: string; name: string };
+  generatedAt: string;
+  receivers: {
+    id: string; name: string; phone: string; sabha: string | null;
+    count: number; total: number; returnCount: number; returned: number; net: number;
+    entries: MyTransferEntry[];
+  }[];
+  totals: { kits: number; transfers: number; people: number; returned: number; returns: number; net: number };
+};
+
+// GET /admin/transactions/:id (tap on an activity row).
+export type TxnPerson = { id: string; name: string; phone: string; role: string; sabha: string | null; zone: string | null; isAdmin: boolean };
+export type TxnDetail = {
+  id: string;
+  type: Txn['type'];
+  quantity: number;
+  note: string | null;
+  created_at: string;
+  from: TxnPerson | null;
+  to: TxnPerson | null;
+  by: TxnPerson | null;
+  request: { type: 'request' | 'return'; quantity: number; note: string | null; createdAt: string; handledAt: string | null; adminNote: string | null } | null;
+  transferRequest: { createdAt: string; respondedAt: string | null } | null;
+  sale: {
+    id?: string;
+    customerName: string;
+    customerPhone: string | null;
+    unitPrice: number;
+    totalAmount: number;
+    linkedRegistration: boolean;
+    editable?: boolean; // money still untouched in the seller's wallet
+    lockReason?: string | null;
+  } | null;
+};
+
+// GET /admin/teams and /admin/teams/:key/members ("With users" drill-down).
+export type TeamRow = {
+  key: string; name: string; sabha: string; zone: string | null; members: number; holding: number; sold: number; holders: number;
+  kind?: 'team' | 'admin' | 'none'; // admin = a Sabha/Zone/Pradesh Admin on their own row
+  adminRole?: string | null;
+  person?: string | null;
+};
+export type TeamMember = { id: string; name: string; phone: string; role: string; isAdmin: boolean; holding: number; sold: number; amount: number };

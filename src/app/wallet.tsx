@@ -178,13 +178,14 @@ function MethodBadge({ t, withRef }: { t: MoneyTransfer; withRef?: boolean }) {
 
 function LedgerRow({ e }: { e: WalletEntry }) {
   const credit = e.amount > 0;
-  const icon = e.type === 'sale' ? 'cart-outline' : credit ? 'arrow-down' : 'arrow-up';
+  const adjust = e.type === 'sale_adjust'; // a kit admin edited or deleted a sale
+  const icon = e.type === 'sale' ? 'cart-outline' : adjust ? 'create-outline' : credit ? 'arrow-down' : 'arrow-up';
   return (
     <View style={s.item}>
-      <IconTile icon={icon} tone={e.type === 'sale' ? 'primary' : credit ? 'success' : 'info'} size={34} />
+      <IconTile icon={icon} tone={e.type === 'sale' ? 'primary' : adjust ? 'warning' : credit ? 'success' : 'info'} size={34} />
       <View style={{ flex: 1 }}>
         <Text style={s.name} numberOfLines={1}>
-          {e.type === 'sale' ? 'Sale' : credit ? 'Money received' : 'Money sent'}
+          {e.type === 'sale' ? 'Sale' : adjust ? 'Sale changed by admin' : credit ? 'Money received' : 'Money sent'}
         </Text>
         <Text style={s.meta} numberOfLines={1}>
           {[e.note, dateTime(e.created_at)].filter(Boolean).join(' · ')}
