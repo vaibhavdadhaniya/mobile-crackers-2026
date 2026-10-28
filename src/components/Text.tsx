@@ -1,5 +1,5 @@
 import { StyleSheet, Text as RNText, TextInput as RNTextInput, TextInputProps, TextProps } from 'react-native';
-import { forwardRef } from 'react';
+import { ComponentRef, forwardRef } from 'react';
 import { colors, fonts } from '../theme';
 
 const FAMILY: Record<string, string> = {
@@ -27,6 +27,6 @@ export function Text({ style, ...props }: TextProps) {
   return <RNText {...props} style={[{ color: colors.text }, ...withFont(style)]} />;
 }
 
-export const TextInput = forwardRef<RNTextInput, TextInputProps>(function TextInput({ style, ...props }, ref) {
+export const TextInput = forwardRef<ComponentRef<typeof RNTextInput>, TextInputProps>(function TextInput({ style, ...props }, ref) {
   return <RNTextInput ref={ref} {...props} style={withFont([{ fontWeight: '500' }, style])} />;
 });

@@ -1,3 +1,4 @@
+import type { ComponentRef } from 'react';
 import { createContext, forwardRef, ReactNode, useCallback, useContext, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import {
   Keyboard,
@@ -39,17 +40,17 @@ const GAP = 24;
  * ScrollView that keeps the focused TextInput visible above the keyboard on
  * iOS and edge-to-edge Android (where the window does not resize).
  */
-export const KeyboardAwareScrollView = forwardRef<ScrollView, ScrollViewProps & { children?: ReactNode }>(
+export const KeyboardAwareScrollView = forwardRef<ComponentRef<typeof ScrollView>, ScrollViewProps & { children?: ReactNode }>(
   function KeyboardAwareScrollView({ children, onScroll, ...props }, ref) {
-    const scrollRef = useRef<ScrollView>(null);
-    const wrapRef = useRef<View>(null);
+    const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
+    const wrapRef = useRef<ComponentRef<typeof View>>(null);
     const offsetY = useRef(0);
     const kbTop = useKeyboardTop();
     const kbTopRef = useRef<number | null>(null);
     kbTopRef.current = kbTop;
     const [pad, setPad] = useState(0);
 
-    useImperativeHandle(ref, () => scrollRef.current as ScrollView);
+    useImperativeHandle(ref, () => scrollRef.current as ComponentRef<typeof ScrollView>);
 
     const ensureVisible = useCallback((mode: ScrollMode = 'visible') => {
       const top = kbTopRef.current;

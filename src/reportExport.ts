@@ -5,7 +5,6 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import * as MediaLibrary from 'expo-media-library/legacy';
 import { captureRef } from 'react-native-view-shot';
-import type { View } from 'react-native';
 import { ensureFreshSession, getBaseUrl, getToken, refreshSession } from './api';
 
 const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
@@ -51,7 +50,7 @@ export async function shareTeamReportExcel(zoneId: string, zoneName: string, tea
 export const shareMyTransfersExcel = () => shareExcel('/admin/reports/my-transfers.xlsx', 'My-Transfers.xlsx', 'My transfers');
 
 // Screenshot the given view (the report table) and save it to the gallery.
-export async function saveViewToGallery(view: View) {
+export async function saveViewToGallery(view: Parameters<typeof captureRef>[0]) {
   const perm = await MediaLibrary.requestPermissionsAsync(true);
   if (!perm.granted) throw new Error('Allow photo access to save the report image');
   const uri = await captureRef(view, { format: 'png', quality: 1, result: 'tmpfile' });

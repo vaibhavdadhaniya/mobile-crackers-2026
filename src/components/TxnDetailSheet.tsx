@@ -3,7 +3,9 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { api, TxnDetail, TxnPerson } from '../api';
 import { Sheet } from './Sheet';
 import { Dialog } from './Dialog';
-import { Badge, Button, Field, IconName, IconTile, Text, tones } from './ui';
+import { Badge, Button, Field, IconName, IconTile, Segmented, Text, tones } from './ui';
+import { PAYMENT_OPTIONS, paymentLabel } from './MySales';
+import type { PaymentMethod } from '../api';
 import { useFeedback } from './Feedback';
 import { colors, radius } from '../theme';
 import { dateTime, digitsOnly, money, num, roleLabel } from '../format';
@@ -19,6 +21,7 @@ export function TxnDetailSheet({ id, onClose, onChanged }: { id: string | null; 
   const [qty, setQty] = useState('');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  const [method, setMethod] = useState<PaymentMethod>('cash');
   const [busy, setBusy] = useState<'save' | 'delete' | null>(null);
 
   useEffect(() => {
@@ -44,6 +47,7 @@ export function TxnDetailSheet({ id, onClose, onChanged }: { id: string | null; 
     setQty(String(d.quantity));
     setName(sale.customerName);
     setPhone(sale.customerPhone ?? '');
+    setMethod(sale.paymentMethod ?? 'cash');
     setEditing(true);
   };
 
@@ -71,7 +75,7 @@ export function TxnDetailSheet({ id, onClose, onChanged }: { id: string | null; 
     if (!ok) return;
     setBusy('save');
     try {
-      const r = await api.put<{ message: string }>(`/admin/sales/${sale.id}`, { quantity: qty, customerName: name.trim(), customerPhone: phone });
+      const r = await api.put<{ message: string }>(`/admin/sales/${sale.id}`, { quantity: qty, customerName: name.trim(), customerPhone: phone, paymentMethod: method });
       fb.success('Sale updated', r.message);
       onChanged?.();
       onClose();
@@ -136,6 +140,7 @@ export function TxnDetailSheet({ id, onClose, onChanged }: { id: string | null; 
               </Section>
               <Section label="Amount">
                 <Row label="Price per kit" value={money(d.sale?.unitPrice)} />
+                <Row label="Payment" value={paymentLabel(d.sale?.paymentMethod)} />
                 <Row label="Total" value={money(d.sale?.totalAmount)} strong />
               </Section>
 
@@ -198,6 +203,8 @@ export function TxnDetailSheet({ id, onClose, onChanged }: { id: string | null; 
       <Text style={s.preview}>New amount: {money(Math.round(Number(qty || 0) * (sale?.unitPrice ?? 0) * 100) / 100)}</Text>
       <Field label="Customer name" icon="person-outline" value={name} onChangeText={setName} />
       <Field label="Customer mobile (optional)" icon="call-outline" keyboardType="phone-pad" value={phone} onChangeText={(v) => setPhone(digitsOnly(v))} maxLength={10} />
+      <Text style={s.sectionLabel}>Payment</Text>
+      <Segmented options={PAYMENT_OPTIONS} value={method} onChange={setMethod} />
       <View style={[s.actions, { marginTop: 4 }]}>
         <Button title="Cancel" variant="outline" style={{ flex: 1 }} onPress={() => setEditing(false)} disabled={!!busy} />
         <Button title="Save" style={{ flex: 1.4 }} onPress={save} loading={busy === 'save'} disabled={!!busy} />

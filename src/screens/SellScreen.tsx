@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { api } from '../api';
+import { api, PaymentMethod } from '../api';
 import { useAuth } from '../auth';
-import { Button, Card, Field, Screen, Stepper, tap, Text } from '../components/ui';
+import { Button, Card, Field, Screen, Segmented, Stepper, tap, Text } from '../components/ui';
+import { MySales, PAYMENT_OPTIONS, paymentLabel } from '../components/MySales';
 import { BalanceCard } from '../components/BalanceCard';
 import { useFeedback } from '../components/Feedback';
 import { colors, radius, shadow } from '../theme';
@@ -18,6 +19,8 @@ export default function SellScreen() {
   const fb = useFeedback();
   const [form, setForm] = useState<{ phone: string; name: string; regId: string | null }>({ phone: '', name: '', regId: null });
   const [qty, setQty] = useState(1);
+  const [method, setMethod] = useState<PaymentMethod>('cash'); // Cash by default
+  const [salesKey, setSalesKey] = useState(0);
   const [busy, setBusy] = useState(false);
   const [active, setActive] = useState<FieldName | null>(null);
   const [results, setResults] = useState<Reg[]>([]);
@@ -69,6 +72,7 @@ export default function SellScreen() {
   const reset = () => {
     setForm({ phone: '', name: '', regId: null });
     setQty(1);
+    setMethod('cash');
     setResults([]);
   };
 
@@ -88,6 +92,7 @@ export default function SellScreen() {
         { label: 'Mobile', value: form.phone || 'Not given' },
         { label: 'Kits', value: num(n) },
         ...(price ? [{ label: 'Amount', value: money(n * price) }] : []),
+        { label: 'Payment', value: method === 'pending' ? 'Pending (not added to wallet until paid)' : paymentLabel(method) },
       ],
       confirmText: 'Save sale',
     });
@@ -99,10 +104,12 @@ export default function SellScreen() {
         customerName: name,
         customerPhone: form.phone || null,
         registrationId: form.regId,
+        paymentMethod: method,
       });
       fb.success('Sale recorded', r.message);
       reset();
       refreshMe();
+      setSalesKey((k) => k + 1);
     } catch (e) {
       fb.error('Sale failed', (e as Error).message);
     } finally {
@@ -133,7 +140,12 @@ export default function SellScreen() {
     ) : null;
 
   return (
-    <Screen onRefresh={refreshMe}>
+    <Screen
+      onRefresh={() => {
+        refreshMe();
+        setSalesKey((k) => k + 1);
+      }}
+    >
       <BalanceCard label="Kits available" value={balance} extra={{ label: 'Price per kit', value: money(price) }} />
       <Card>
         <View style={{ zIndex: 2 }}>
@@ -175,8 +187,13 @@ export default function SellScreen() {
           </View>
         )}
 
+        <Text style={s.payLabel}>Payment</Text>
+        <Segmented options={PAYMENT_OPTIONS} value={method} onChange={setMethod} />
+
         <Button title="Save sale" onPress={submit} loading={busy} disabled={balance === 0 || !form.name.trim()} />
       </Card>
+
+      <MySales refreshKey={salesKey} />
     </Screen>
   );
 }
@@ -207,5 +224,6 @@ const s = StyleSheet.create({
     marginBottom: 14,
   },
   totalLabel: { color: colors.muted, fontSize: 13 },
+  payLabel: { fontSize: 12.5, fontWeight: '600', color: colors.muted, marginBottom: 6 },
   totalValue: { fontWeight: '700', fontSize: 16 },
 });

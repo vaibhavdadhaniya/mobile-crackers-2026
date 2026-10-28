@@ -1,3 +1,4 @@
+import type { ComponentRef } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Image, Platform, Pressable, ScrollView, StyleSheet, TextInput as RNTextInput, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -28,8 +29,8 @@ export default function Login() {
   const [busy, setBusy] = useState(false);
   const [mode, setMode] = useState<'static' | 'msg91' | 'whatsapp'>('static');
   const [cooldown, setCooldown] = useState(0);
-  const otpRef = useRef<RNTextInput>(null);
-  const scrollRef = useRef<ScrollView>(null);
+  const otpRef = useRef<ComponentRef<typeof RNTextInput>>(null);
+  const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
   const kbHeight = useKeyboardHeight();
   // If the window itself shrank for the keyboard (some Android setups), only add what is still covered.
   const [viewH, setViewH] = useState(0);

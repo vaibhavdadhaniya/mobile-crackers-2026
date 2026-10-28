@@ -1,3 +1,4 @@
+import type { ComponentRef } from 'react';
 import { useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,7 +24,7 @@ export default function Reports() {
   const [shown, setShown] = useState<Shown | null>(null);
   const [options, setOptions] = useState(false);
   const [busy, setBusy] = useState<'image' | 'excel' | null>(null);
-  const sheetRef = useRef<View>(null);
+  const sheetRef = useRef<ComponentRef<typeof View>>(null);
   // Zone Report step 2: the zone's teams, pick one or more.
   const [zoneAll, setZoneAll] = useState<TeamReport | null>(null);
   const [picked, setPicked] = useState<Set<string>>(new Set());

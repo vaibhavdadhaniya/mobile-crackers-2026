@@ -342,3 +342,82 @@ describe('dashboard central stock tile', () => {
     assert.deepEqual(centralStockTile({ centralStock: 10, onHold: 0, onHoldCount: 0, requested: 0, requestCount: 0 }), { minus: 0, left: 10, sub: 'Nothing pending' });
   });
 });
+
+describe('sale payment method', () => {
+  const p = loadTs('src/payment.ts');
+  it('Cash is the default and first option; then UPI and Pending', () => {
+    assert.equal(p.DEFAULT_PAYMENT, 'cash');
+    assert.deepEqual(p.PAYMENT_OPTIONS.map((o) => o.key), ['cash', 'upi', 'pending']);
+  });
+  it('labels unknown or missing methods as Cash (old sales)', () => {
+    assert.equal(p.paymentLabel('upi'), 'UPI');
+    assert.equal(p.paymentLabel('pending'), 'Pending');
+    assert.equal(p.paymentLabel('cash'), 'Cash');
+    assert.equal(p.paymentLabel(undefined), 'Cash');
+    assert.equal(p.paymentLabel(null), 'Cash');
+  });
+});
+
+describe('WhatsApp share report (Kits with members)', () => {
+  const r = loadTs('src/shareReport.ts');
+  it('team lead: title, place, total and every member numbered', () => {
+    const t = r.teamShareText({
+      team: "Meena Shah's team",
+      place: 'Sabha A1 · Zone A',
+      date: '28 Oct 2026',
+      members: [
+        { name: 'Meena Shah', holding: 5, sold: 0 },
+        { name: 'Ravi Patel', holding: 8, sold: 2 },
+      ],
+    });
+    assert.equal(
+      t,
+      [
+        "*Kits report: Meena Shah's team*",
+        'Sabha A1 · Zone A · 28 Oct 2026',
+        '',
+        '*Total:* 2 sold out of 15 kits',
+        '',
+        '*Members*',
+        '1. Meena Shah: 5 kits, 0 sold',
+        '2. Ravi Patel: 8 kits, 2 sold',
+      ].join('\n')
+    );
+  });
+  it('sabha admin: Sabha Admin line, then teams with member counts; totals include everyone', () => {
+    const t = r.sabhaShareText({
+      sabha: 'Sabha A1',
+      zone: 'Zone A',
+      date: '28 Oct 2026',
+      teams: [
+        { name: 'Asha (Sabha Admin)', kind: 'admin', adminRole: 'Sabha Admin', person: 'Asha', members: 1, holding: 6, sold: 1 },
+        { name: 'Meena Shah', kind: 'team', members: 2, holding: 13, sold: 2 },
+        { name: 'Karan', kind: 'team', members: 1, holding: 0, sold: 0 },
+      ],
+    });
+    assert.equal(
+      t,
+      [
+        '*Kits report: Sabha A1*',
+        'Zone A · 28 Oct 2026',
+        '',
+        '*Total:* 3 sold out of 22 kits · 2 teams',
+        'Sabha Admin: Asha: 6 kits, 1 sold',
+        '',
+        '*Teams*',
+        '1. Meena Shah (2 members): 13 kits, 2 sold',
+        '2. Karan (1 member): 0 kits, 0 sold',
+      ].join('\n')
+    );
+  });
+  it('no teams and no place still give a clean message', () => {
+    const t = r.sabhaShareText({ sabha: 'S', date: '1 Jan 2027', teams: [] });
+    assert.ok(t.includes('*Total:* 0 sold out of 0 kits · 0 teams'));
+    assert.ok(t.endsWith('*Teams*\nNo teams yet'));
+    assert.equal(r.teamShareText({ team: 'T', date: 'd', members: [] }).split('\n')[1], 'd');
+  });
+  it('builds WhatsApp links with the text encoded', () => {
+    assert.equal(r.whatsappUrl('a b*\n'), 'whatsapp://send?text=a%20b*%0A');
+    assert.equal(r.whatsappWebUrl('x&y'), 'https://wa.me/?text=x%26y');
+  });
+});

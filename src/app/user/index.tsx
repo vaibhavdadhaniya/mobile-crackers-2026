@@ -21,7 +21,8 @@ export default function UserHome() {
   const history = useApi<Txn[]>('/kits/history?limit=5');
   const [refreshKey, setRefreshKey] = useState(0);
   // Sabha Admins open on their sabha dashboard and can switch to their own kits.
-  const isSabhaAdmin = me?.user.role === 'sabha_admin';
+  // Sabha Admin: whole sabha; Team Lead: own team. Both open on the group view and get + (Sell) in the header.
+  const groupKind: 'sabha' | 'team' | null = me?.user.role === 'sabha_admin' ? 'sabha' : me?.user.role === 'team_lead' ? 'team' : null;
   const [view, setView] = useState<'sabha' | 'mine'>('sabha');
   const onHold = me?.kitsOnHold ?? 0;
   const available = Math.max(0, (me?.balance ?? 0) - onHold);
@@ -45,7 +46,12 @@ export default function UserHome() {
 
   return (
     <View style={{ flex: 1 }}>
-      <AppHeader fireworks title={me?.user.name ?? ''} subtitle={me ? roleLabel(me.user.role) : undefined} />
+      <AppHeader
+        fireworks
+        title={me?.user.name ?? ''}
+        subtitle={me ? roleLabel(me.user.role) : undefined}
+        action={groupKind ? { icon: 'add', label: 'Sell kits', onPress: () => router.push('/user/sell') } : undefined}
+      />
       <Screen
         refreshing={notes.refreshing}
         onRefresh={() => {
@@ -57,10 +63,10 @@ export default function UserHome() {
       >
         <KitTransferRequests box="in" refreshKey={refreshKey} onChanged={() => history.reload()} />
 
-        {isSabhaAdmin && (
+        {groupKind && (
           <Segmented
             options={[
-              { key: 'sabha', label: 'My Sabha' },
+              { key: 'sabha', label: groupKind === 'team' ? 'My Team' : 'My Sabha' },
               { key: 'mine', label: 'My kits' },
             ]}
             value={view}
@@ -68,8 +74,8 @@ export default function UserHome() {
           />
         )}
 
-        {isSabhaAdmin && view === 'sabha' ? (
-          <SabhaDashboard refreshKey={refreshKey} />
+        {groupKind && view === 'sabha' ? (
+          <SabhaDashboard kind={groupKind} refreshKey={refreshKey} />
         ) : (
         <>
 

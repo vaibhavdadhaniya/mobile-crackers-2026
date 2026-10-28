@@ -1,3 +1,4 @@
+import type { ComponentRef } from 'react';
 import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Modal, PanResponder, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -22,7 +23,7 @@ export function Sheet({
 }) {
   const insets = useSafeAreaInsets();
   const kbTop = useKeyboardTop();
-  const rootRef = useRef<View>(null);
+  const rootRef = useRef<ComponentRef<typeof View>>(null);
   const [lift, setLift] = useState(0);
 
   // Drag-to-close. onClose may decline (e.g. while busy): then the sheet springs back.

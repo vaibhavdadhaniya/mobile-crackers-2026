@@ -8,6 +8,7 @@ import { Button, Card, Field, LinkText, QuickPicks, Screen, Segmented } from '..
 import { SearchPicker } from '../components/SearchPicker';
 import { BalanceCard } from '../components/BalanceCard';
 import { KitTransferRequests } from '../components/KitTransfers';
+import { TransferEntries } from '../components/TransferEntries';
 import { useFeedback } from '../components/Feedback';
 import { digitsOnly, num, rupees } from '../format';
 
@@ -104,6 +105,7 @@ export default function TransferScreen() {
         <Button title="Send transfer request" onPress={submit} loading={busy} disabled={!to || !qty} />
       </Card>
       <KitTransferRequests box="out" refreshKey={refreshKey} />
+      <TransferEntries refreshKey={refreshKey} />
       </>
       )}
     </Screen>

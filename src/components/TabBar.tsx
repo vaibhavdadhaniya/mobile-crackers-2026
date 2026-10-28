@@ -21,7 +21,8 @@ export const TAB_ICONS: Record<string, [Icon, Icon]> = {
 };
 
 // Floating tab bar that respects the home indicator and hides with the keyboard.
-export function TabBar({ state, descriptors, navigation }: TabBarProps) {
+// expo-router 58 (SDK 58): the tab bar gets emitter + navigateToTab instead of navigation.
+export function TabBar({ state, descriptors, emitter, navigateToTab }: TabBarProps) {
   const insets = useSafeAreaInsets();
   const [hidden, setHidden] = useState(false);
 
@@ -47,10 +48,10 @@ export function TabBar({ state, descriptors, navigation }: TabBarProps) {
           const badge = options.tabBarBadge;
 
           const onPress = () => {
-            const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
+            const event = emitter.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
             if (!focused && !event.defaultPrevented) {
               tap();
-              navigation.navigate(route.name, route.params);
+              navigateToTab(route.key);
             }
           };
 

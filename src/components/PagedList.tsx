@@ -60,8 +60,8 @@ export function PagedList<T extends { id: string }>({
             <ActivityIndicator color={colors.primary} style={{ marginVertical: 16 }} />
           ) : !hasMore ? (
             <Text style={s.end}>You've reached the end</Text>
-          ) : null
-        ) : null
+          ) : undefined
+        ) : undefined
       }
       onEndReached={paged.loadMore}
       onEndReachedThreshold={0.4}

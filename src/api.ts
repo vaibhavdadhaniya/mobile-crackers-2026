@@ -332,19 +332,19 @@ export type WalletEntry = { id: string; type: 'sale' | 'transfer_in' | 'transfer
 
 // GET /sabha/dashboard (Sabha Admin only): stats of the admin's own sabha.
 export type SabhaMember = { id: string; name: string; phone: string; role: string; balance: number; sold: number; amount: number; wallet: number };
+// GET /sabha/dashboard (Sabha Admin: whole sabha) or /sabha/team/dashboard (Team Lead: own team).
 export type SabhaDashboard = {
-  sabha: { id: string; name: string; zoneName: string | null };
+  kind: 'sabha' | 'team';
+  group: { kind: 'sabha' | 'team'; id: string; name: string; zoneName: string | null; sabhaName?: string | null };
+  sabha?: { id: string; name: string; zoneName: string | null };
   totals: {
     members: number;
     activeHolders: number;
     sellers: number;
     withMembers: number;
-    received: number;
     sold: number;
     revenue: number;
     saleCount: number;
-    soldToday: number;
-    soldLast7: number;
     cashInWallets: number;
     pendingRequests: number;
     sellThroughPct: number | null;
@@ -418,6 +418,7 @@ export type TxnDetail = {
     unitPrice: number;
     totalAmount: number;
     linkedRegistration: boolean;
+    paymentMethod?: PaymentMethod;
     editable?: boolean; // money still untouched in the seller's wallet
     lockReason?: string | null;
   } | null;
@@ -431,3 +432,19 @@ export type TeamRow = {
   person?: string | null;
 };
 export type TeamMember = { id: string; name: string; phone: string; role: string; isAdmin: boolean; holding: number; sold: number; amount: number };
+
+// GET /sales/mine (my sales, Sell screen). editable = money still untouched in my wallet.
+export type PaymentMethod = 'cash' | 'upi' | 'pending';
+export type MySale = {
+  id: string;
+  quantity: number;
+  customer_name: string;
+  customer_phone: string | null;
+  unit_price: number;
+  total_amount: number;
+  payment_method: PaymentMethod;
+  transaction_id: string | null;
+  created_at: string;
+  editable: boolean;
+  lock_reason: string | null;
+};

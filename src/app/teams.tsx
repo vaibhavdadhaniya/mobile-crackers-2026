@@ -1,31 +1,123 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, Share, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { api, TeamMember, TeamRow } from '../api';
 import { useApi } from '../hooks';
-import { Avatar, Badge, Banner, Card, Chips, Empty, Screen, tap, Text } from '../components/ui';
+import { Avatar, Badge, Banner, Card, Empty, Screen, tap, Text } from '../components/ui';
 import { Sheet } from '../components/Sheet';
+import { useFeedback } from '../components/Feedback';
 import { colors, radius } from '../theme';
-import { num, roleLabel } from '../format';
+import { dateLabel, num, roleLabel } from '../format';
 import { useAuth } from '../auth';
-import { activeRows, groupTeams } from '../teamGroups';
+import { groupTeams } from '../teamGroups';
+import { sabhaShareText, teamShareText, whatsappUrl, whatsappWebUrl } from '../shareReport';
 
-type Filter = 'active' | 'all';
+// Today in India (YYYY-MM-DD) for the report heading.
+const today = () => dateLabel(new Date(Date.now() + 5.5 * 3600 * 1000).toISOString());
+
+// Opens WhatsApp with the text typed in; falls back to wa.me, then the system share sheet.
+async function shareOnWhatsApp(text: string, onFail: (msg: string) => void) {
+  tap();
+  for (const url of [whatsappUrl(text), whatsappWebUrl(text)]) {
+    try {
+      await Linking.openURL(url);
+      return;
+    } catch {
+      // try the next way
+    }
+  }
+  try {
+    await Share.share({ message: text });
+  } catch (e) {
+    onFail((e as Error).message);
+  }
+}
+
+function WhatsAppButton({ text, disabled }: { text: string; disabled?: boolean }) {
+  const fb = useFeedback();
+  return (
+    <Pressable
+      disabled={disabled}
+      onPress={() => shareOnWhatsApp(text, (m) => fb.error('Could not share', m))}
+      style={({ pressed }) => [s.wa, (pressed || disabled) && { opacity: 0.7 }]}
+    >
+      <Ionicons name="logo-whatsapp" size={20} color="#fff" />
+      <Text style={s.waText}>Share report on WhatsApp</Text>
+    </Pressable>
+  );
+}
 
 // "With users" drill-down (kit admins): Zone > Sabha > Teams with kits held and sold; tap a
 // team for its karyakartas. Zone kit admins only see their zone (server-side), shown from Sabha.
+// Team Lead: their own team's total and members directly. Sabha Admin: their sabha, plus a WhatsApp share.
 export default function Teams() {
-  const teams = useApi<TeamRow[]>('/admin/teams');
-  const [filter, setFilter] = useState<Filter>('active');
+  const { me } = useAuth();
+  if (me?.user.role === 'team_lead' && !me.user.isAdmin) return <TeamLeadView />;
+  return <TeamsView />;
+}
+
+function TeamLeadView() {
+  const { me } = useAuth();
+  const leadId = me?.user.id ?? '';
+  const teams = useApi<TeamRow[]>('/sabha/teams');
+  const members = useApi<TeamMember[]>(`/sabha/teams/${encodeURIComponent(leadId)}/members`);
+  const team = teams.data?.[0];
+  const rows = members.data ?? [];
+  const holding = rows.reduce((a, m) => a + m.holding, 0);
+  const sold = rows.reduce((a, m) => a + m.sold, 0);
+  const title = `${me?.user.name ?? 'My'}'s team`;
+  const place = team ? [team.sabha, team.zone].filter(Boolean).join(' · ') : null;
+  const refresh = () => {
+    teams.refresh();
+    members.refresh();
+  };
+
+  return (
+    <Screen refreshing={members.refreshing} onRefresh={refresh}>
+      {members.error ? <Banner text={members.error} /> : null}
+      <Card style={{ paddingVertical: 12 }}>
+        <Text style={s.sabhaName} numberOfLines={1}>
+          {title}
+        </Text>
+        {place ? <Text style={s.meta}>{place}</Text> : null}
+      </Card>
+      <Card style={s.summary}>
+        <Summary label="Kits with members" value={num(holding)} color={colors.primary} />
+        <View style={s.vr} />
+        <Summary label="Sold" value={num(sold)} color={colors.success} />
+        <View style={s.vr} />
+        <Summary label="Members" value={num(rows.length)} color={colors.text} />
+      </Card>
+
+      <WhatsAppButton
+        disabled={!members.data}
+        text={teamShareText({ team: title, place, date: today(), members: rows })}
+      />
+
+      {!members.data && !members.error ? <ActivityIndicator color={colors.primary} style={{ marginVertical: 24 }} /> : null}
+      {members.data ? (
+        <Card style={{ paddingVertical: 4 }}>
+          <MemberTable rows={rows} />
+        </Card>
+      ) : null}
+    </Screen>
+  );
+}
+
+function TeamsView() {
+  const { me } = useAuth();
+  // Kit admins: /admin/teams (their zone or all). Sabha Admin / Team Lead: /sabha/teams (own sabha / team).
+  const base = me?.user.isAdmin ? '/admin/teams' : '/sabha/teams';
+  const teams = useApi<TeamRow[]>(base);
+  const isSabhaAdmin = !me?.user.isAdmin && me?.user.role === 'sabha_admin';
   const [open, setOpen] = useState<TeamRow | null>(null);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
-  const { me } = useAuth();
 
+  // Every team is listed (no filter): Zone > Sabha (Sabha Admin first) > Teams.
   const all = teams.data ?? [];
-  // Teams with kits or sales (+ the Sabha Admin of each shown sabha, even at 0 kits).
-  const active = all.filter((t) => t.holding > 0 || t.sold > 0);
-  const list = filter === 'active' ? activeRows(all) : all;
+  const list = all;
   const groups = groupTeams(list);
+  const teamCount = groups.reduce((a, z) => a + z.sabhas.reduce((b, sb) => b + sb.teams.filter((t) => t.kind !== 'admin').length, 0), 0);
   // Main Super Admin sees every zone: show the zone level. A zone kit admin has one zone.
   const showZones = !!me?.user.isPrimary || groups.length > 1;
   const holding = all.reduce((a, t) => a + t.holding, 0);
@@ -39,20 +131,24 @@ export default function Teams() {
         <View style={s.vr} />
         <Summary label="Sold" value={num(sold)} color={colors.success} />
         <View style={s.vr} />
-        <Summary label="Teams" value={`${num(active.length)}/${num(all.length)}`} color={colors.text} />
+        <Summary label="Teams" value={num(teamCount)} color={colors.text} />
       </Card>
 
-      <Chips
-        options={[
-          { key: 'active', label: `With kits or sales (${active.length})` },
-          { key: 'all', label: `All teams (${all.length})` },
-        ]}
-        value={filter}
-        onChange={setFilter}
-      />
+      {isSabhaAdmin ? (
+        <WhatsAppButton
+          disabled={!teams.data}
+          text={sabhaShareText({
+            sabha: all[0]?.sabha ?? 'My Sabha',
+            zone: all[0]?.zone,
+            date: today(),
+            // Same rows as on screen: Sabha Admin first, then teams (no "Without team").
+            teams: groups.flatMap((z) => z.sabhas.flatMap((sb) => sb.teams)),
+          })}
+        />
+      ) : null}
 
       {!teams.data ? <ActivityIndicator color={colors.primary} style={{ marginVertical: 24 }} /> : null}
-      {teams.data && list.length === 0 ? <Empty icon="people-outline" text="No teams with kits yet" /> : null}
+      {teams.data && list.length === 0 ? <Empty icon="people-outline" text="No teams yet" /> : null}
 
       {/* Zone > Sabha > Teams. A zone kit admin only has one zone: start at Sabha level. */}
       {groups.map((z) => {
@@ -165,12 +261,12 @@ export default function Teams() {
         );
       })}
 
-      <MembersSheet team={open} onClose={() => setOpen(null)} />
+      <MembersSheet base={base} team={open} onClose={() => setOpen(null)} />
     </Screen>
   );
 }
 
-function MembersSheet({ team, onClose }: { team: TeamRow | null; onClose: () => void }) {
+function MembersSheet({ base, team, onClose }: { base: string; team: TeamRow | null; onClose: () => void }) {
   const [rows, setRows] = useState<TeamMember[] | null>(null);
   const [error, setError] = useState('');
 
@@ -180,7 +276,7 @@ function MembersSheet({ team, onClose }: { team: TeamRow | null; onClose: () => 
     setRows(null);
     setError('');
     api
-      .get<TeamMember[]>(`/admin/teams/${encodeURIComponent(team.key)}/members`)
+      .get<TeamMember[]>(`${base}/${encodeURIComponent(team.key)}/members`)
       .then((r) => live && setRows(r))
       .catch((e) => live && setError((e as Error).message));
     return () => {
@@ -199,32 +295,41 @@ function MembersSheet({ team, onClose }: { team: TeamRow | null; onClose: () => 
       {!rows && !error ? <ActivityIndicator color={colors.primary} style={{ marginVertical: 24 }} /> : null}
       {rows ? (
         <View style={s.box}>
-          <View style={[s.row, s.head]}>
-            <Text style={[s.th, { flex: 1 }]}>Karyakarta</Text>
-            <Text style={[s.th, s.num]}>Kits</Text>
-            <Text style={[s.th, s.num]}>Sold</Text>
-          </View>
-          {rows.map((m, i) => (
-            <View key={m.id} style={[s.row, i > 0 && s.divider]}>
-              <Avatar name={m.name} size={32} />
-              <View style={{ flex: 1, paddingHorizontal: 8 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Text style={[s.name, { flexShrink: 1 }]} numberOfLines={1}>
-                    {m.name}
-                  </Text>
-                  {m.isAdmin ? <Badge text="Kit mgmt" tone="primary" /> : null}
-                </View>
-                <Text style={s.meta} numberOfLines={1}>
-                  {roleLabel(m.role)} · {m.phone}
-                </Text>
-              </View>
-              <Text style={[s.val, s.num, { color: m.holding ? colors.primary : colors.faint }]}>{num(m.holding)}</Text>
-              <Text style={[s.val, s.num, { color: m.sold ? colors.success : colors.faint }]}>{num(m.sold)}</Text>
-            </View>
-          ))}
+          <MemberTable rows={rows} />
         </View>
       ) : null}
     </Sheet>
+  );
+}
+
+function MemberTable({ rows }: { rows: TeamMember[] }) {
+  return (
+    <>
+      <View style={[s.row, s.head]}>
+        <Text style={[s.th, { flex: 1 }]}>Karyakarta</Text>
+        <Text style={[s.th, s.num]}>Kits</Text>
+        <Text style={[s.th, s.num]}>Sold</Text>
+      </View>
+      {rows.length === 0 ? <Empty icon="people-outline" text="No members yet" /> : null}
+      {rows.map((m, i) => (
+        <View key={m.id} style={[s.row, i > 0 && s.divider]}>
+          <Avatar name={m.name} size={32} />
+          <View style={{ flex: 1, paddingHorizontal: 8 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Text style={[s.name, { flexShrink: 1 }]} numberOfLines={1}>
+                {m.name}
+              </Text>
+              {m.isAdmin ? <Badge text="Kit mgmt" tone="primary" /> : null}
+            </View>
+            <Text style={s.meta} numberOfLines={1}>
+              {roleLabel(m.role)} · {m.phone}
+            </Text>
+          </View>
+          <Text style={[s.val, s.num, { color: m.holding ? colors.primary : colors.faint }]}>{num(m.holding)}</Text>
+          <Text style={[s.val, s.num, { color: m.sold ? colors.success : colors.faint }]}>{num(m.sold)}</Text>
+        </View>
+      ))}
+    </>
   );
 }
 
@@ -272,4 +377,6 @@ const s = StyleSheet.create({
   totals: { flexDirection: 'row', alignItems: 'baseline', gap: 3 },
   totVal: { fontSize: 14, fontWeight: '700' },
   totLbl: { fontSize: 11, color: colors.muted },
+  wa: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, height: 48, borderRadius: radius.md, backgroundColor: '#25D366', marginBottom: 12 },
+  waText: { color: '#fff', fontSize: 15, fontWeight: '600' },
 });

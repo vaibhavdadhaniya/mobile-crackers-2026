@@ -44,7 +44,6 @@ function RootStack() {
         <Stack.Screen name="sell" options={stackHeader('Sell Kits', 'Record a customer sale')} />
         <Stack.Screen name="holders" options={stackHeader('Holders & Sellers')} />
         <Stack.Screen name="reports" options={stackHeader('Reports', 'Zone report and my transfers')} />
-        <Stack.Screen name="teams" options={stackHeader('Kits with users', 'Teams · tap a team for its karyakartas')} />
       </Stack.Protected>
 
       <Stack.Protected guard={!!token && !isAdmin}>
@@ -53,6 +52,8 @@ function RootStack() {
 
       <Stack.Protected guard={!!token}>
         <Stack.Screen name="notifications" options={stackHeader('Notifications')} />
+        {/* Kit admins (With users) and Sabha Admins (Kits with members); the API checks who may see what. */}
+        <Stack.Screen name="teams" options={stackHeader('Kits with members', 'Teams · tap a team for its karyakartas')} />
         <Stack.Screen name="wallet" options={stackHeader('Wallet', 'Money from sales & transfers')} />
       </Stack.Protected>
 

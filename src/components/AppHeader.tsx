@@ -5,7 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { HeaderBell } from './HeaderBell';
-import { tap } from './ui';
+import { IconName, tap } from './ui';
 import { Text } from './Text';
 import { HeaderFireworks } from './Fireworks';
 import { colors } from '../theme';
@@ -18,6 +18,7 @@ export function AppHeader({
   bell = true,
   children,
   fireworks,
+  action,
 }: {
   title: string;
   subtitle?: string;
@@ -25,6 +26,8 @@ export function AppHeader({
   bell?: boolean;
   children?: ReactNode;
   fireworks?: boolean;
+  // Replaces the bell with a round action button (e.g. + Sell).
+  action?: { icon: IconName; label: string; onPress: () => void };
 }) {
   const insets = useSafeAreaInsets();
   return (
@@ -50,7 +53,21 @@ export function AppHeader({
           </Text>
           {subtitle ? <Text style={s.subtitle}>{subtitle}</Text> : null}
         </View>
-        {bell && <HeaderBell />}
+        {action ? (
+          <Pressable
+            accessibilityLabel={action.label}
+            onPress={() => {
+              tap();
+              action.onPress();
+            }}
+            style={({ pressed }) => [s.iconBtn, pressed && { opacity: 0.7 }]}
+            hitSlop={8}
+          >
+            <Ionicons name={action.icon} size={22} color="#fff" />
+          </Pressable>
+        ) : bell ? (
+          <HeaderBell />
+        ) : null}
       </View>
       {children}
     </View>
