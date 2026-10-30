@@ -10,7 +10,7 @@
     "ios": {
       "supportsTablet": false,
       "deploymentTarget": "16.4",
-      "buildNumber": "1",
+      "buildNumber": "33",
       "bundleIdentifier": "com.app.hpym2024",
       "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
@@ -30,7 +30,7 @@
         "foregroundImage": "./assets/shc-adaptive-fg.png"
       },
       "predictiveBackGestureEnabled": false,
-      "versionCode": 2,
+      "versionCode": 3,
       "permissions": [
         "android.permission.POST_NOTIFICATIONS"
       ]

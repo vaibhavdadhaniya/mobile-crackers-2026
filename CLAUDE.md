@@ -35,6 +35,7 @@ No ESLint config is committed yet; `npx expo lint` will scaffold one on first ru
 
 ### Routing (`src/app/`)
 - Root `_layout.tsx` gates screens with `Stack.Protected` on `token` and `user.isAdmin`: `login` (logged out), `admin/` tab group + `stock`/`sell`/`holders` (admins), `user/` tab group (non-admins), and `notifications`/`wallet` (any logged-in user). `index.tsx` redirects to the right group.
+- Sabha Admins (`user.role === 'sabha_admin'`) are non-admins in routing: they use the `user/` group, and `user/index.tsx` adds a "My Sabha" view (`screens/SabhaDashboard.tsx`, `GET /sabha/dashboard`) beside their own kits.
 - While a saved session exists but `/me` hasn't loaded, the root shows `Loading` or `Offline` (when `bootError` is set).
 - Tab groups use `AppTabs` + `tab(title, headerTitle, subtitle, showHeader)` from `components/tabs.tsx` (custom `TabBar`, gradient `AppHeader`). Stack screens use the `stackHeader()` helper in the root layout.
 - Screens shared between roles live in `src/screens/` and route files just re-export them (e.g. `app/sell.tsx`, `app/user/sell.tsx`, `app/admin/transfer.tsx`, `app/user/transfer.tsx`), or render them with a role prop (`<ActivityScreen admin />` in `app/admin/activity.tsx`).
@@ -63,6 +64,8 @@ No ESLint config is committed yet; `npx expo lint` will scaffold one on first ru
 - `withServerCert.js` — trusts the API server's self-signed cert(s) (`certs/*.pem`, committed; listed in `app.json`) only for the listed hosts. Android: network-security-config. iOS: generates `ServerCertTrust.m`, which adds a server-trust challenge handler to **expo/fetch's** session delegate (`ExpoModulesCore.URLSessionSessionDelegateProxy`, because Expo SDK 57 replaces global `fetch`) and to RN's `RCTHTTPRequestHandler`. It accepts a byte-identical match with the bundled cert, since the server cert lacks the serverAuth EKU that Apple's SSL policy requires. This only works while ATS is relaxed: keep `NSAllowsArbitraryLoads: true` and do **not** add `NSAllowsLocalNetworking` (or the other ATS sub-keys) — their presence makes iOS ignore `NSAllowsArbitraryLoads`, and ATS then rejects the cert before the handler runs (`-1200`/`-9802`, "ATS failed system trust"). When the server cert is replaced, update `certs/server_cert.pem` and rebuild both platforms.
 
 - `withReleaseSigning.js` — signs Android release builds with the upload keystore when `keystore/key.properties` exists in the project root (`storeFile` relative to `keystore/`, `storePassword`, `keyAlias`, `keyPassword`); otherwise falls back to the debug key. `keystore/` is gitignored. Never keep signing files in `android/`: `expo prebuild` regenerates that folder (even without `--clean`) and deletes anything in it.
+
+- `withIosBuildSettingsVersion.js` — makes Info.plist read `CFBundleShortVersionString`/`CFBundleVersion` from the `MARKETING_VERSION`/`CURRENT_PROJECT_VERSION` build settings, which it fills from `expo.version` / `ios.buildNumber` on the app target. Bump versions in `app.json` (and Android's `versionCode`); edits made in Xcode's General tab are lost on the next prebuild. The `UpdateGate` comparisons depend on these values.
 
 - `withAndroidAppName.js` — sets the Android launcher label (`app_name`) from its `name` option, independent of `expo.name` (which also names the iOS project). iOS shows `ios.infoPlist.CFBundleDisplayName` instead.
 
