@@ -1,16 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Contact, requestPermissionsAsync } from 'expo-contacts';
 import { api, PaymentMethod } from '../api';
 import { useAuth } from '../auth';
 import { Button, Card, Field, Screen, Segmented, Stepper, tap, Text } from '../components/ui';
 import { MySales, PAYMENT_OPTIONS, paymentLabel } from '../components/MySales';
 import { BalanceCard } from '../components/BalanceCard';
 import { useFeedback } from '../components/Feedback';
+import { Sheet } from '../components/Sheet';
 import { colors, radius, shadow } from '../theme';
 import { digitsOnly, money, num } from '../format';
 import { ScrollFocusedToTop } from '../components/KeyboardAware';
-import { applyRegistration, exactPhoneMatch, onPhoneChange, Reg, searchTerm } from '../customer';
+import { applyRegistration, contactMobiles, exactPhoneMatch, onPhoneChange, Reg, searchTerm } from '../customer';
 
 type FieldName = 'phone' | 'name';
 
@@ -26,6 +28,8 @@ export default function SellScreen() {
   const [results, setResults] = useState<Reg[]>([]);
   const [searching, setSearching] = useState(false);
   const seq = useRef(0);
+  // Contact with more than one mobile: the user picks one.
+  const [choice, setChoice] = useState<{ name: string; mobiles: string[] } | null>(null);
   // Kits on hold for pending outgoing transfers cannot be sold or returned.
   const balance = Math.max(0, (me?.balance ?? 0) - (me?.kitsOnHold ?? 0));
   const price = me?.kitPrice ?? 0;
@@ -67,6 +71,31 @@ export default function SellScreen() {
     tap();
     setForm(applyRegistration(r));
     setResults([]);
+  };
+
+  // Fill from a phone-book contact. Searching the number again links a matching registration.
+  const fillFromContact = (name: string, phone: string) => {
+    setForm((f) => ({ phone, name: name || f.name, regId: null }));
+    setActive('phone');
+    setChoice(null);
+  };
+
+  const pickContact = async () => {
+    tap();
+    try {
+      // Reading the picked contact's numbers needs contacts access on both platforms.
+      const perm = await requestPermissionsAsync();
+      if (!perm.granted) return fb.error('Contacts access needed', 'Allow contacts access in Settings to pick a number.');
+      const contact = await Contact.presentPicker();
+      if (!contact) return;
+      const [phones, name] = await Promise.all([contact.getPhones(), contact.getFullName().catch(() => '')]);
+      const mobiles = contactMobiles(phones.map((p) => p.number ?? ''));
+      if (mobiles.length === 0) return fb.error('No mobile number', 'This contact has no 10 digit number.');
+      if (mobiles.length === 1) return fillFromContact(name.trim(), mobiles[0]);
+      setChoice({ name: name.trim(), mobiles });
+    } catch (e) {
+      fb.error('Could not open contacts', (e as Error).message);
+    }
   };
 
   const reset = () => {
@@ -159,7 +188,15 @@ export default function SellScreen() {
             onFocus={() => setActive('phone')}
             onBlur={() => setTimeout(() => setActive((a) => (a === 'phone' ? null : a)), 150)}
             onChangeText={(v) => setForm((f) => onPhoneChange(f, v))}
-            right={searching && active === 'phone' ? <ActivityIndicator size="small" color={colors.primary} /> : null}
+            right={
+              searching && active === 'phone' ? (
+                <ActivityIndicator size="small" color={colors.primary} />
+              ) : (
+                <Pressable onPress={pickContact} hitSlop={10} accessibilityLabel="Pick from contacts">
+                  <Ionicons name="person-circle-outline" size={24} color={colors.primary} />
+                </Pressable>
+              )
+            }
           />
           {dropdown('phone')}
         </View>
@@ -194,6 +231,23 @@ export default function SellScreen() {
       </Card>
 
       <MySales refreshKey={salesKey} />
+
+      <Sheet visible={!!choice} onClose={() => setChoice(null)} title={choice?.name || 'Choose number'} subtitle="Pick the customer's mobile">
+        {choice?.mobiles.map((m, i) => (
+          <Pressable
+            key={m}
+            onPress={() => {
+              tap();
+              fillFromContact(choice.name, m);
+            }}
+            style={({ pressed }) => [s.item, i > 0 && s.itemBorder, pressed && { backgroundColor: colors.primarySoft }]}
+          >
+            <Ionicons name="call-outline" size={16} color={colors.primary} />
+            <Text style={[s.itemName, { flex: 1 }]}>{m}</Text>
+            <Ionicons name="arrow-forward" size={16} color={colors.faint} />
+          </Pressable>
+        ))}
+      </Sheet>
     </Screen>
   );
 }

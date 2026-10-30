@@ -3,6 +3,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } f
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, radius, shadow } from '../theme';
 import { Text } from './Text';
+import { FeedbackHost } from './Feedback';
 import { FocusScrollContext, useKeyboardTop } from './KeyboardAware';
 
 // Centered popup (forms such as Edit sale). Stays above the keyboard: when it opens, the popup
@@ -38,6 +39,7 @@ export function Dialog({
             </ScrollView>
           </FocusScrollContext.Provider>
         </View>
+        <FeedbackHost />
       </View>
     </Modal>
   );

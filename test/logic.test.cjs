@@ -34,6 +34,12 @@ describe('customer matching (sell form)', () => {
     assert.equal(c.normalizeMobile('91'), '91');
   });
 
+  it('takes the last 10 digits of each phone-book number, once', () => {
+    assert.deepEqual(c.contactMobiles(['+91 97246 11496', '09724611496', '97246-11496']), ['9724611496']);
+    assert.deepEqual(c.contactMobiles(['+91 98000 00001', '079 2658 1234', '1234567']), ['9800000001', '7926581234']);
+    assert.deepEqual(c.contactMobiles([]), []);
+  });
+
   it('only searches the phone after 3 digits and the name after 2 chars', () => {
     assert.equal(c.searchTerm('phone', '98'), null);
     assert.equal(c.searchTerm('phone', '980'), '980');
@@ -376,11 +382,11 @@ describe('WhatsApp share report (Kits with members)', () => {
         "*Kits report: Meena Shah's team*",
         'Sabha A1 · Zone A · 28 Oct 2026',
         '',
-        '*Total:* 2 sold out of 15 kits',
+        '*Total:* Assigned 15 · Sold 2 · Stock 13',
         '',
         '*Members*',
-        '1. Meena Shah: 5 kits, 0 sold',
-        '2. Ravi Patel: 8 kits, 2 sold',
+        '1. Meena Shah: Assigned 5 · Sold 0 · Stock 5',
+        '2. Ravi Patel: Assigned 10 · Sold 2 · Stock 8',
       ].join('\n')
     );
   });
@@ -401,18 +407,18 @@ describe('WhatsApp share report (Kits with members)', () => {
         '*Kits report: Sabha A1*',
         'Zone A · 28 Oct 2026',
         '',
-        '*Total:* 3 sold out of 22 kits · 2 teams',
-        'Sabha Admin: Asha: 6 kits, 1 sold',
+        '*Total:* Assigned 22 · Sold 3 · Stock 19 · 2 teams',
+        'Sabha Admin: Asha: Assigned 7 · Sold 1 · Stock 6',
         '',
         '*Teams*',
-        '1. Meena Shah (2 members): 13 kits, 2 sold',
-        '2. Karan (1 member): 0 kits, 0 sold',
+        '1. Meena Shah (2 members): Assigned 15 · Sold 2 · Stock 13',
+        '2. Karan (1 member): Assigned 0 · Sold 0 · Stock 0',
       ].join('\n')
     );
   });
   it('no teams and no place still give a clean message', () => {
     const t = r.sabhaShareText({ sabha: 'S', date: '1 Jan 2027', teams: [] });
-    assert.ok(t.includes('*Total:* 0 sold out of 0 kits · 0 teams'));
+    assert.ok(t.includes('*Total:* Assigned 0 · Sold 0 · Stock 0 · 0 teams'));
     assert.ok(t.endsWith('*Teams*\nNo teams yet'));
     assert.equal(r.teamShareText({ team: 'T', date: 'd', members: [] }).split('\n')[1], 'd');
   });

@@ -1,5 +1,5 @@
 import { createContext, ReactNode, useCallback, useContext, useEffect, useRef, useState } from 'react';
-import { Animated, Easing, Modal, Pressable, StyleSheet, View } from 'react-native';
+import { Animated, BackHandler, Easing, Keyboard, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -35,9 +35,25 @@ const KIND = {
 };
 
 // In-app toasts and confirm dialogs, used instead of the system Alert box.
+// They draw in the topmost FeedbackHost: the root one, or the one inside an open Dialog / Sheet.
+// iOS shows only one Modal at a time, so a confirm in its own Modal would stay hidden behind a
+// popup (and an awaited confirm() would never resolve).
+type Dialog = ConfirmOptions & { resolve: (v: boolean) => void };
+type Hosts = {
+  register: (id: number, root: boolean) => () => void;
+  top: number | null;
+  toast: Toast | null;
+  dialog: Dialog | null;
+  dropToast: (id: number) => void;
+  close: (v: boolean) => void;
+};
+const HostsContext = createContext<Hosts | null>(null);
+let hostSeq = 0;
+
 export function FeedbackProvider({ children }: { children: ReactNode }) {
   const [toast, setToast] = useState<Toast | null>(null);
-  const [dialog, setDialog] = useState<(ConfirmOptions & { resolve: (v: boolean) => void }) | null>(null);
+  const [dialog, setDialog] = useState<Dialog | null>(null);
+  const [hosts, setHosts] = useState<number[]>([]);
   const seq = useRef(0);
 
   const show = useCallback((kind: ToastKind, title: string, message?: string) => {
@@ -51,6 +67,7 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
     (opts: ConfirmOptions) =>
       new Promise<boolean>((resolve) => {
         Haptics.selectionAsync().catch(() => {});
+        Keyboard.dismiss(); // the keyboard would cover the buttons
         setDialog({ ...opts, resolve });
       }),
     []
@@ -61,6 +78,12 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
     setDialog(null);
   };
 
+  // The root host stays at the bottom; popups stack above it in the order they open.
+  const register = useCallback((id: number, root: boolean) => {
+    setHosts((h) => (root ? [id, ...h] : [...h, id]));
+    return () => setHosts((h) => h.filter((x) => x !== id));
+  }, []);
+
   const api: FeedbackApi = {
     success: (t, m) => show('success', t, m),
     error: (t, m) => show('error', t, m),
@@ -70,50 +93,88 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
 
   return (
     <FeedbackContext.Provider value={api}>
-      {children}
-      {toast && <ToastView key={toast.id} toast={toast} onDone={() => setToast((t) => (t?.id === toast.id ? null : t))} />}
-      <Modal visible={!!dialog} transparent animationType="fade" onRequestClose={() => close(false)} statusBarTranslucent navigationBarTranslucent>
-        <View style={s.backdrop}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={() => close(false)} />
-          {dialog && (
-            <View style={s.dialog}>
-              <View style={[s.dIcon, { backgroundColor: dialog.destructive ? colors.dangerSoft : colors.primarySoft }]}>
-                <Ionicons
-                  name={dialog.icon ?? (dialog.destructive ? 'warning-outline' : 'help-circle-outline')}
-                  size={24}
-                  color={dialog.destructive ? colors.danger : colors.primary}
-                />
-              </View>
-              <Text style={s.dTitle}>{dialog.title}</Text>
-              {dialog.message ? <Text style={s.dMsg}>{dialog.message}</Text> : null}
-              {dialog.details?.length ? (
-                <View style={s.details}>
-                  {dialog.details.map((d) => (
-                    <View key={d.label} style={s.detailRow}>
-                      <Text style={s.detailLabel}>{d.label}</Text>
-                      <Text style={s.detailValue} numberOfLines={1}>
-                        {d.value}
-                      </Text>
-                    </View>
-                  ))}
-                </View>
-              ) : null}
-              <View style={s.dActions}>
-                <Pressable style={({ pressed }) => [s.dBtn, s.dCancel, pressed && { opacity: 0.7 }]} onPress={() => close(false)}>
-                  <Text style={s.dCancelText}>{dialog.cancelText ?? 'Cancel'}</Text>
-                </Pressable>
-                <Pressable
-                  style={({ pressed }) => [s.dBtn, { backgroundColor: dialog.destructive ? colors.danger : colors.primary }, pressed && { opacity: 0.85 }]}
-                  onPress={() => close(true)}
-                >
-                  <Text style={s.dOkText}>{dialog.confirmText ?? 'Confirm'}</Text>
-                </Pressable>
-              </View>
-            </View>
-          )}
-        </View>
-      </Modal>
+      <HostsContext.Provider
+        value={{
+          register,
+          top: hosts[hosts.length - 1] ?? null,
+          toast,
+          dialog,
+          dropToast: (id) => setToast((t) => (t?.id === id ? null : t)),
+          close,
+        }}
+      >
+        {children}
+        <FeedbackHost root />
+      </HostsContext.Provider>
     </FeedbackContext.Provider>
+  );
+}
+
+// Place as the last child of a Modal's root view (Dialog and Sheet do) so feedback shows above it.
+export function FeedbackHost({ root = false }: { root?: boolean }) {
+  const h = useContext(HostsContext);
+  const id = useRef(0);
+  if (!id.current) id.current = ++hostSeq;
+  const register = h?.register;
+  useEffect(() => register?.(id.current, root), [register, root]);
+
+  // Android back closes the confirm (inside a Modal, the Modal gets the back press instead).
+  const open = !!h?.dialog && h.top === id.current;
+  const close = h?.close;
+  useEffect(() => {
+    if (!open || !root || !close) return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      close(false);
+      return true;
+    });
+    return () => sub.remove();
+  }, [open, root, close]);
+
+  if (!h || h.top !== id.current) return null;
+  const { toast, dialog } = h;
+  return (
+    <>
+      {dialog && (
+        <View style={[StyleSheet.absoluteFill, s.backdrop]}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => h.close(false)} />
+          <View style={s.dialog}>
+            <View style={[s.dIcon, { backgroundColor: dialog.destructive ? colors.dangerSoft : colors.primarySoft }]}>
+              <Ionicons
+                name={dialog.icon ?? (dialog.destructive ? 'warning-outline' : 'help-circle-outline')}
+                size={24}
+                color={dialog.destructive ? colors.danger : colors.primary}
+              />
+            </View>
+            <Text style={s.dTitle}>{dialog.title}</Text>
+            {dialog.message ? <Text style={s.dMsg}>{dialog.message}</Text> : null}
+            {dialog.details?.length ? (
+              <View style={s.details}>
+                {dialog.details.map((d) => (
+                  <View key={d.label} style={s.detailRow}>
+                    <Text style={s.detailLabel}>{d.label}</Text>
+                    <Text style={s.detailValue} numberOfLines={1}>
+                      {d.value}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
+            <View style={s.dActions}>
+              <Pressable style={({ pressed }) => [s.dBtn, s.dCancel, pressed && { opacity: 0.7 }]} onPress={() => h.close(false)}>
+                <Text style={s.dCancelText}>{dialog.cancelText ?? 'Cancel'}</Text>
+              </Pressable>
+              <Pressable
+                style={({ pressed }) => [s.dBtn, { backgroundColor: dialog.destructive ? colors.danger : colors.primary }, pressed && { opacity: 0.85 }]}
+                onPress={() => h.close(true)}
+              >
+                <Text style={s.dOkText}>{dialog.confirmText ?? 'Confirm'}</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      )}
+      {toast && <ToastView key={toast.id} toast={toast} onDone={() => h.dropToast(toast.id)} />}
+    </>
   );
 }
 
@@ -180,7 +241,7 @@ const s = StyleSheet.create({
   },
   tTitle: { color: '#fff', fontWeight: '600', fontSize: 14 },
   tMsg: { color: 'rgba(255,255,255,0.72)', fontSize: 12.5, marginTop: 1, lineHeight: 17 },
-  backdrop: { flex: 1, backgroundColor: 'rgba(28,25,23,0.5)', justifyContent: 'center', padding: 28 },
+  backdrop: { zIndex: 999, elevation: 999, backgroundColor: 'rgba(28,25,23,0.5)', justifyContent: 'center', padding: 28 },
   dialog: { backgroundColor: '#fff', borderRadius: radius.xl, padding: 22, ...shadow(3) },
   dIcon: { width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
   dTitle: { fontSize: 18, fontWeight: '700' },

@@ -33,6 +33,9 @@
       "versionCode": 3,
       "permissions": [
         "android.permission.POST_NOTIFICATIONS"
+      ],
+      "blockedPermissions": [
+        "android.permission.WRITE_CONTACTS"
       ]
     },
     "web": {
@@ -54,6 +57,12 @@
         }
       ],
       "expo-font",
+      [
+        "expo-contacts",
+        {
+          "contactsPermission": "Allow $(PRODUCT_NAME) to read your contacts so you can pick a customer's mobile number."
+        }
+      ],
       "./plugins/with-scene-lifecycle",
       "./plugins/withIosBuildSettingsVersion",
       "./plugins/withReleaseSigning",

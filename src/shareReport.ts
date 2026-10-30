@@ -5,10 +5,10 @@ export type ShareMember = { name: string; holding: number; sold: number };
 export type ShareTeam = { name: string; kind?: string; adminRole?: string | null; person?: string | null; members: number; holding: number; sold: number };
 
 const n = (v: number) => Math.round(Number(v || 0)).toLocaleString('en-IN');
-const kits = (h: number, s: number) => `${n(h)} kits, ${n(s)} sold`;
+// holding = kits still with them (stock); assigned = stock + sold.
+const kits = (h: number, s: number) => `Assigned ${n(h + s)} · Sold ${n(s)} · Stock ${n(h)}`;
 const plural = (v: number, word: string) => `${n(v)} ${word}${v === 1 ? '' : 's'}`;
-// Kits given out = still with members + sold.
-const total = (holding: number, sold: number) => `*Total:* ${n(sold)} sold out of ${n(holding + sold)} kits`;
+const total = (holding: number, sold: number) => `*Total:* ${kits(holding, sold)}`;
 
 export function teamShareText(o: { team: string; place?: string | null; date: string; members: ShareMember[] }): string {
   const holding = o.members.reduce((a, m) => a + m.holding, 0);

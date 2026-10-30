@@ -40,3 +40,16 @@ export function onPhoneChange(
 export function applyRegistration(reg: Reg) {
   return { phone: reg.phone, name: reg.name, regId: reg.id };
 }
+
+// Mobiles from a phone-book contact: last 10 digits of each number (drops +91 / leading 0),
+// numbers shorter than 10 digits skipped, duplicates removed.
+export function contactMobiles(numbers: string[]): string[] {
+  const out: string[] = [];
+  for (const raw of numbers) {
+    const d = raw.replace(/\D/g, '');
+    if (d.length < 10) continue;
+    const m = d.slice(-10);
+    if (!out.includes(m)) out.push(m);
+  }
+  return out;
+}

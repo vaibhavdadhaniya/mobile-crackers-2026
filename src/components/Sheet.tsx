@@ -4,6 +4,7 @@ import { Animated, Modal, PanResponder, Pressable, ScrollView, StyleSheet, View 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, radius } from '../theme';
 import { Text } from './Text';
+import { FeedbackHost } from './Feedback';
 import { FocusScrollContext, useKeyboardTop } from './KeyboardAware';
 
 // Bottom sheet modal that clears the home indicator and sits above the keyboard.
@@ -90,6 +91,7 @@ export function Sheet({
             </ScrollView>
           </FocusScrollContext.Provider>
         </Animated.View>
+        <FeedbackHost />
       </View>
     </Modal>
   );
