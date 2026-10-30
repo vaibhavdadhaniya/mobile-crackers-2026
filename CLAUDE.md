@@ -69,6 +69,8 @@ No ESLint config is committed yet; `npx expo lint` will scaffold one on first ru
 
 - `withAndroidAppName.js` — sets the Android launcher label (`app_name`) from its `name` option, independent of `expo.name` (which also names the iOS project). iOS shows `ios.infoPlist.CFBundleDisplayName` instead.
 
+- `withAgpVersion.js` — pins the Android Gradle plugin version (`version` option, currently 9.0.0) in `android/build.gradle`. React Native 0.86 pins AGP 9.2.1, which the installed Android Studio (2025.3) refuses to sync. Remove the plugin once Android Studio supports React Native's AGP version.
+
 `expo-build-properties` limits Android builds to `armeabi-v7a`/`arm64-v8a` (no x86 emulators) to keep the sideloaded APK small.
 
 `ios.deploymentTarget` is pinned to 16.4 in `app.json` (Expo 57's minimum); without it the app target defaults to 15.0 and Xcode builds fail against the `Expo` module.

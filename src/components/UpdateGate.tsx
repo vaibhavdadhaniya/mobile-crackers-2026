@@ -93,11 +93,11 @@ export function UpdateGate() {
           <View style={s.icon}>
             <Ionicons name="cloud-download-outline" size={28} color={colors.primary} />
           </View>
-          <Text style={s.title}>{force ? 'Update required' : 'Update available'}</Text>
+          <Text style={[s.title, s.left]}>{force ? 'Update required' : 'Update available'}</Text>
           <Text style={s.version}>
             Version {version || 'new'} ({latestBuild}) is available. You have {currentVersion} ({current}).
           </Text>
-          {settings.UpdateLog ? <Text style={s.message}>{settings.UpdateLog}</Text> : null}
+          {settings.UpdateLog ? <Text style={[s.message, s.left]}>{settings.UpdateLog}</Text> : null}
           <Button
             title="Update now"
             icon="download-outline"
@@ -120,4 +120,5 @@ const s = StyleSheet.create({
   title: { fontSize: 19, fontWeight: '700', textAlign: 'center' },
   version: { color: colors.muted, marginTop: 6, fontSize: 14 },
   message: { marginTop: 10, fontSize: 14, lineHeight: 20, color: colors.text, textAlign: 'center' },
+  left: { textAlign: 'left' },
 });
