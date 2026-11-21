@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Contact, requestPermissionsAsync } from 'expo-contacts';
+import { presentContactPickerAsync } from 'expo-contacts/legacy';
 import { api, PaymentMethod } from '../api';
 import { useAuth } from '../auth';
 import { Button, Card, Field, Screen, Segmented, Stepper, tap, Text } from '../components/ui';
@@ -83,13 +84,27 @@ export default function SellScreen() {
   const pickContact = async () => {
     tap();
     try {
-      // Reading the picked contact's numbers needs contacts access on both platforms.
-      const perm = await requestPermissionsAsync();
-      if (!perm.granted) return fb.error('Contacts access needed', 'Allow contacts access in Settings to pick a number.');
-      const contact = await Contact.presentPicker();
-      if (!contact) return;
-      const [phones, name] = await Promise.all([contact.getPhones(), contact.getFullName().catch(() => '')]);
-      const mobiles = contactMobiles(phones.map((p) => p.number ?? ''));
+      let name: string;
+      let numbers: string[];
+      if (Platform.OS === 'ios') {
+        // The legacy picker returns the picked contact's data directly and needs no contacts
+        // access. The new API returns only an id and re-reads the contact from the store, which
+        // fails ("Failed to find a contact with id") for contacts outside limited access.
+        const contact = await presentContactPickerAsync();
+        if (!contact) return;
+        name = contact.name ?? '';
+        numbers = (contact.phoneNumbers ?? []).map((p) => p.number ?? '');
+      } else {
+        // Reading the picked contact's numbers needs contacts access on Android.
+        const perm = await requestPermissionsAsync();
+        if (!perm.granted) return fb.error('Contacts access needed', 'Allow contacts access in Settings to pick a number.');
+        const contact = await Contact.presentPicker();
+        if (!contact) return;
+        const [phones, fullName] = await Promise.all([contact.getPhones(), contact.getFullName().catch(() => '')]);
+        name = fullName;
+        numbers = phones.map((p) => p.number ?? '');
+      }
+      const mobiles = contactMobiles(numbers);
       if (mobiles.length === 0) return fb.error('No mobile number', 'This contact has no 10 digit number.');
       if (mobiles.length === 1) return fillFromContact(name.trim(), mobiles[0]);
       setChoice({ name: name.trim(), mobiles });
